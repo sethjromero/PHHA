@@ -7,7 +7,7 @@
 ## Ponderosa directory organization
 
 ```mermaid
-flowchart LR;
+flowchart TD;
     A(**PROJECT DIRECTORY** <br> on ponderosa: <br> /working/romero/PHHA)
     A --> B(**fastq** <br> *individual fastq files*)
     A --> C(**assembly** <br> *reference assemblies and associated files*)
