@@ -7,17 +7,17 @@
 ## Ponderosa directory organization
 
 ```mermaid
-flowchart TD;
+flowchart LR;
     A(**PROJECT DIRECTORY** <br> on ponderosa: <br> /working/romero/PHHA)
-    A --> B(**fastq** <br> *individual fastq files*)
-    A --> C(**assembly** <br> *reference assemblies and associated files*)
-    A --> D(**mapping** <br> *individual bam files, population lists, etc*)
-    A --> E(**filtering** <br> *vcf files, filtering logs, hard-GT matrices*)
-    A --> F("**entropy** <br> *entropy related input and output (gprob, q, dic files)*")
-    C --> G(**final** <br> *chosen assembly/index files*)
+    A --> B(**fastq** <br> *individual<br>fastq files*)
+    A --> C(**assembly** <br> *reference assemblies<br>and associated files*)
+    A --> D(**mapping** <br> *individual bam files,<br>population lists, etc*)
+    A --> E(**filtering** <br> *vcf files, filtering<br>logs, hard-GT<br>matrices*)
+    A --> F("**entropy** <br> *entropy related input and<br>output (gprob, q, dic files)*")
+    C --> G(**final** <br> *chosen assembly/index<br>files*)
     A --> H(**angsd**)
-    E --> I(**final** <br> *post-filtering VCF, individual, 012 file used for entropy*)
-    A --> J(**scripts** <br> *mostly bash scripts referenced in workflows*)
+    E --> I(**final** <br> *post-filtering VCF,<br>individual, 012 files<br>used for entropy*)
+    A --> J(**scripts** <br> *mostly bash scripts<br>referenced in<br>workflows*)
     H --> K(**diversity**)
     H --> L(**relatedness**)
 ```
