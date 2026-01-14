@@ -3,14 +3,17 @@
 ## Table of Contents
 
 1. [De novo reference assembly](#1-de-novo-reference-assembly)  
-    1a. [Defining dataset](#1a-defining-dataset)  
-    1b. [Generating unique sequence sets](#1b-generating-unique-sequence-sets)
+    1a. [Characterizing dataset](#1a-characterizing-dataset)  
+    1b. [Generating unique sequences](#1b-generating-unique-sequence-sets)  
+    1c. [Clustering contigs for reference assembly](#1c-clustering-contigs-for-reference-assembly)  
+    1d. [Indexing final assembly](#1d-indexing-final-assembly)  
+2. [Mapping](#2-mapping)
 
 
 
 ## 1. De novo reference assembly
 
-### 1a. Defining dataset
+### 1a. Characterizing dataset
 
 All directories and paths in this markdown will be relative to:  
 `/working/romero/PHHA/`
@@ -27,7 +30,7 @@ Checking number of total individuals
 ls *.fastq.gz -1 | wc -l
 ```
 
-Checking number of total populations (**NOTE**: sensitive to naming convention)
+Checking number of total populations (**NOTE**: sensitive to naming structure)
 
 ```sh
 ls *.fastq.gz | cut -d'_' -f2 | sort -u | wc -l
@@ -38,33 +41,36 @@ PHHA dataset:
 + **256** individuals
 + **26** populations
 
-Checking distribution of fastq file sizes via:
+Checking distribution of fastq file sizes
 
 ```sh
-ls -l | awk '
-> NR>1 {
->   s=$5
->   if (s >= 1e9)        b=">1GB"
->   else if (s >= 1e8)   b="100MB–1GB"
->   else if (s >= 1e7)   b="10–100MB"
->   else if (s >= 1e6)   b="1–10MB"
->   else                 b="<1MB"
->   c[b]++
-> }
-> END {
->   bins[1]=">1GB"
->   bins[2]="100MB–1GB"
->   bins[3]="10–100MB"
->   bins[4]="1–10MB"
->   bins[5]="<1MB"
->   for (i=1; i<=5; i++)
->     printf "%-12s %d\n", bins[i], c[bins[i]]+0
-> }'
+ls -l *.fastq.gz | awk '
+{
+  s=$5
+  if (s >= 1e9)        b=">1GB"
+  else if (s >= 5e8)   b="500MB–1GB"
+  else if (s >= 1e8)   b="100MB-500MB"
+  else if (s >= 1e7)   b="10–100MB"
+  else if (s >= 1e6)   b="1–10MB"
+  else                 b="<1MB"
+  c[b]++
+}
+END {
+  bins[1]=">1GB"
+  bins[2]="500MB–1GB"
+  bins[3]="100MB-500MB"
+  bins[4]="10–100MB"
+  bins[5]="1–10MB"
+  bins[6]="<1MB"
+  for (i=1; i<=6; i++)
+    printf "%-12s %d\n", bins[i], c[bins[i]]+0
+}'
 ```
 
 ```
 >1GB         0
-100MB–1GB    12
+500MB–1GB    0
+100MB-500MB  12
 10–100MB     238
 1–10MB       4
 <1MB         2
@@ -108,8 +114,6 @@ ls -lhS | awk '{print $5, $9}' | tail
 
 Going ahead and building assembly on all individuals (too few outliers to bother tossing for now).
 
-
-
 ### 1b. Generating unique sequence sets
 
 Making a list of individual IDs from the .fastq.gz files
@@ -124,8 +128,83 @@ AWK1='BEGIN{P=1}{if(P==1||P==2){gsub(/^[@]/,">");print}; if(P==4)P=0; P++}'
 AWK2='!/>/'
 PERLT='while (<>) {chomp; $z{$_}++;} while(($k,$v) = each(%z)) {print "$v\t$k\n";}'
 ```
-Running the awk and perl commands:
+
+Running awk and perl commands:
 
 ```sh
-nohup cat namelist | parallel --no-notice -j 8 "zcat {}.fastq | mawk '$AWK1' | mawk '$AWK2' | perl -e '$PERLT' > {}.uniq.seqs" 2> /dev/null &
+nohup parallel --no-notice -j 8 "zcat {}.fastq | mawk '$AWK1' | mawk '$AWK2' | perl -e '$PERLT' > {}.uniq.seqs" :::: namelist &>/dev/null &
 ```
+
+### 1c. Clustering contigs for reference assembly
+
+Using the script `generateAssembly.sh` to automate this
+
+```sh
+module load cd-hit/4.6
+```
+
+From within `PHHA/fastq/`
+
+```sh
+nohup bash ../scripts/generateAssembly.sh \
+    -k 2 \
+    -i 2 \
+    -c 0.96 \
+    -t 16 \
+    -o ../assembly/PHHA.k2.i2.c96.fa \
+    > k2.i2.c96.log 2>&1 &
+```
+
+- `-k` minimum number of times a sequence must occur within a single sample to be included in clustering
+- `-i` minimum number of individuals a sequence must occur in to be included in clustering
+- `-c` clustering match percentage used by **cd-hit**
+- `-t` number of threads to use
+- `-o` output name for assembly file (contigs, FASTA format)
+
+Ran `cd-hit` on sequence sets of `k=2` and `i=2` with a range of `c` values (**0.89 - 0.97**)
+
+Summarizing number of contigs for each assembly based on clustering match percentage
+
+```sh
+{
+  echo -e "cluster_pct\tcontig_count"
+  awk '
+    BEGIN{OFS="\t"}
+    FNR==1{match(FILENAME,/c([0-9]{2})/,m);c=m[1];n=0}
+    /^>/{n++}
+    ENDFILE{print c,n}' PHHA*.fa
+} > assembly_contig_counts.txt
+```
+
+```sh
+cluster_pct	    contig_count
+91	            878248
+92	            958586
+93	            1016270
+94	            1072715
+95	            1232428
+96	            1504062
+97	            1940870
+```
+
+Continuing with the assembly based on **c = 0.94**
+
+```sh
+mv PHHA.k2.i2.c94.fa PHHA_ref.fa
+mv PHHA.k2.i2.c94.fa.clstr PHHA_ref.fa.clstr
+```
+
+### 1d. Indexing final assembly
+
+Final steps of assembly
+
+```sh
+module load bwa/0.7.17-r1188
+```
+
+```sh
+bwa index -p PHHA_ref PHHA_ref.fa
+```
+
+
+## 2. Mapping
