@@ -152,7 +152,7 @@ nohup bash ../scripts/generateAssembly.sh \
     -c 0.96 \
     -t 16 \
     -o ../assembly/PHHA.k2.i2.c96.fa \
-    > k2.i2.c96.log 2>&1 &
+    > ../assembly/k2.i2.c96.log 2>&1 &
 ```
 
 - `-k` minimum number of times a sequence must occur within a single sample to be included in clustering
@@ -178,6 +178,8 @@ Summarizing number of contigs for each assembly based on clustering match percen
 
 ```sh
 cluster_pct	    contig_count
+89	            763499
+90	            815035
 91	            878248
 92	            958586
 93	            1016270
@@ -208,3 +210,34 @@ bwa index -p PHHA_ref PHHA_ref.fa
 
 
 ## 2. Mapping
+
+Straightforward. Automating via the script `mapAndIndex.sh`. Look in there for details.
+
+```sh
+module load bwa/0.7.17-r1188
+module load samtools/1.10
+```
+
+From within `bams` directory:
+
+```sh
+nohup bash ../scripts/mapAndIndex.sh -t 28 -r ../assembly/PHHA_ref -f "../fastq/*.fastq.gz" > mapping.log 2>/dev/null &
+```
+
+For checking ongoing status:
+
+```sh
+tail -n 1 mapping.log
+```
+
+## 3. Variant calling
+
+```sh
+module load bcftools/1.9
+```
+
+
+
+```sh
+nohup bcftools mpileup -a DP,AD,INFO/AD -C 50 -d 250 -f ../assembly/PHHA_ref.fa -q 30 -Q 20 -I -b bam_list.txt -o ../vcf/PHHA.bcf > ../vcf/mpileup.log 2>&1 &
+```
