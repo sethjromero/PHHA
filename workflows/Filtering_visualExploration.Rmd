@@ -1,0 +1,58 @@
+---
+title:  |
+  | **Phacelia hastata**
+  | <span style='font-size: 18pt'>*Filtering exploration*</span>
+output: 
+  html_document:
+    theme: flatly
+    highlight: tango
+---
+
+
+```{r, echo=FALSE}
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F, fig.width = 10, fig.height = 4.5, fig.align = 'center')
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(ggrepel)
+library(patchwork)
+library(MoMAColors)
+library(readr)
+library(data.table)
+library(colorspace)
+library(ggnewscale)
+```
+
+```{r, fig.width=3, fig.height=5}
+col37 <- c("#a1def0", "#b32728", "#4ed31b", "#bf209e", "#3f862d", 
+           "#b32df9", "#99d683", "#74398b", "#ead624", "#4853fc", 
+           "#fe8f06", "#395f97", "#1cf1a3", "#ed8bc7", "#7c440e", 
+           "#c6c0fe", "#444a1e", "#efbba2", "#369094", "#fa756b",
+           "#88e99a", "#256b33", "#6dc5dd", "#154975", "#628df2",
+           "#874fbf", "#e84fe1", "#eec8f1", "#752e4f", "#c7799a",
+           "#2a2bf0", "#aebf8a", "#743502", "#bce333", "#e72525",
+           "#fea53b", "#ce1365")
+
+ind_miss  <- read_delim("Artem.bithin.q30.imiss", 
+                        delim = "\t",
+                        col_names = c("ind", "ndata", "nfiltered", "nmiss", "fmiss"), 
+                        skip = 1) %>%
+    # next line should work for most sample naming conventions, but adjust as needed
+    mutate(Pop = paste(str_split_i(ind, '_', 1), str_split_i(ind, '_', 2), sep = '_'))
+
+imissFig <- ggplot(ind_miss, 
+                   aes(x = fmiss, y = Pop, fill = Pop, color = Pop)) +
+  geom_jitter(pch = 21, size = 2,
+              position = position_jitter(height = 0.2)) +
+  scale_fill_manual(values = col37) +
+  scale_color_manual(values = darken(col37, 0.3)) +
+  theme_bw() +
+  theme(legend.position = 'none')
+
+imissFig
+```
