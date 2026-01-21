@@ -1,0 +1,265 @@
+ \documentclass[letterpaper, 12pt]{article}
+
+%---------------------------------------- + ---- + ---- + ---- + 
+\setlength{\parskip}{1ex plus0.5ex minus0.5ex}
+\setlength{\textheight}{9.0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\topmargin}{-0.5in} %% remove if using latex, rather than pdflatex
+\setlength{\oddsidemargin}{0in}
+%---------------------------------------- + ---- + ---- + ---- + 
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{lmodern}
+\usepackage{adjustbox}
+\usepackage{blindtext}
+\usepackage{isotope}
+\usepackage[table]{xcolor}% http://ctan.org/pkg/xcolor
+    \definecolor{darkblue}{rgb}{0,0,.5}
+\usepackage{array} %so you can center  a p column
+\usepackage{siunitx} %SI units
+\usepackage[width=.75\textwidth,font=footnotesize,labelfont=bf]{caption}
+\usepackage[english]{babel}
+\usepackage{pdfpages}
+\usepackage{textcomp} %for trademark and copyright symbols
+
+%for adding figures
+\usepackage{graphicx}
+\graphicspath{ {images/} }
+
+
+\usepackage{setspace} 
+\doublespacing
+%-----------------------------------------------
+\usepackage{natbib}
+\bibliographystyle{apalike}
+\usepackage{hyperref}
+	%get rid of awful boxes
+	\hypersetup{
+		colorlinks,
+		linkcolor=darkblue,
+		citecolor=darkblue,
+		urlcolor=darkblue
+	}
+
+%-----------------------------------------------
+%section headings 
+\usepackage{titlesec}
+\titleformat*{\subsection}{\normalfont\large\itshape}
+
+%------------------------------------------------
+%supplemental formatting
+\newcommand{\beginsupplement}{%
+        \setcounter{table}{0}
+        \renewcommand{\thetable}{S\arabic{table}}%
+        \setcounter{figure}{0}
+        \renewcommand{\thefigure}{S\arabic{figure}}%
+     }
+
+
+% for line numbering
+%\usepackage{lineno}
+%\usepackage[autostyle]{csquote%s} %this should be loaded after lineno to avoid an annoying warning
+
+%\usepackage{times}
+\usepackage{setspace}
+%\doublespacing
+\usepackage{rotating}
+%to get displays to stay where one puts them
+\usepackage{float}
+\begin{document}
+
+\noindent {\large \bf PHHA manuscript title} 
+
+
+\medskip
+
+\noindent {\large Fearless Leader \textsuperscript{1,2}, Cameron Amos \textsuperscript{1,2}, Ellen McMullen \textsuperscript{1,2}, Seth J. Romero \textsuperscript{1,2}, Thomas L. Parchman \textsuperscript{1,2}}
+
+\bigskip   
+
+\noindent \parbox[t]{6.5in}{\textsuperscript{1}Department of Biology, University of Nevada, Reno, NV 89557, USA}
+
+\noindent \parbox[t]{6.5in}{\textsuperscript{2}Ecology, Evolution, and Conservation Graduate Biology Program, University of Nevada, Reno, NV 89557, USA}
+  
+\vspace{1in}
+
+\noindent \emph{Corresponding author}: \parbox[t]{4in}{Thomas L. Parchman\\
+  1664 N. Virginia Street\\
+  Department of Biology, 100\\
+  University of Nevada, Reno\\
+  Reno, NV 89557, USA\\
+  tparchman@unr.edu
+}
+
+\bigskip
+
+%Please provide a list of 4–10 key words. 
+\noindent \emph{Keywords:} 
+
+\bigskip
+
+%65 characters (including spaces)
+\noindent \emph{Running title: }
+\bigskip
+
+
+\noindent Author contributions: 
+
+\newpage
+
+
+%%%%% Target Journals %%%%%%
+
+% Molecular Ecology 
+
+
+
+\section*{Abstract}
+\textbf{}
+\newline
+\pagebreak
+\newpage
+
+%\begin{linenumbers}
+%%%%%%%%%%%%%%%%%%%%%% INTRODUCTION %%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%
+\section*{INTRODUCTION}
+%%%%%%%%%%%%%%
+
+
+
+\subsection*{Paragraph 1}
+Checking citations \citep{rieseberg_chromosomal_2001, petit_glacial_2003, rellstab_practical_2015}
+
+\begin{itemize}
+    \item 
+    \item
+\end{itemize}
+
+
+\subsection*{Paragraph 2}
+
+\begin{itemize}
+    \item 
+    \item
+\end{itemize}
+
+\subsection*{Paragraph 3}
+
+\begin{itemize}
+    \item 
+    \item
+\end{itemize}
+
+\subsection*{Paragraph 4}
+
+\begin{itemize}
+    \item 
+    \item
+\end{itemize}
+
+
+\begin{itemize}
+    \item Aims of the study 
+\begin{itemize}
+    \item 
+    \item
+\end{itemize}
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%% METHODS %%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%
+\section*{MATERIALS AND METHODS}
+%%%%%%%%%%%%%%
+
+\subsection*{Population and subspecies}
+
+\subsection*{Reduced representation library preparation and variant calling}
+
+\subsection*{Population genetic analyses}
+
+\begin{itemize}
+    \item 
+\end{itemize}
+
+\subsection*{Genetic environment association and landscape patterns}
+
+\begin{itemize}
+    \item 
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%% RESULTS %%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%
+\section*{RESULTS}
+%%%%%%%%%%%%%%
+
+\subsection*{Population and subspecies}
+
+\subsection*{Reduced representation library preparation and variant calling}
+
+\subsection*{Population genetic analyses}
+
+\begin{itemize}
+    \item 
+\end{itemize}
+
+\subsection*{Genetic environment association and landscape patterns}
+
+\begin{itemize}
+    \item 
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%% DISCUSSION %%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%
+\section*{DISCUSSION}
+%%%%%%%%%%%%%%
+
+
+\section*{CONCLUSIONS/Suggestions}
+
+
+%%%%%%%%%%%%%%
+\section*{Acknowledgments and conflict of interest statement}
+
+%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%
+\section*{Data availability}
+
+%%%%%%%%%%%%%%
+
+%\end{linenumbers}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% REFERENCES %%%%%%%%%%%%%%%%%%%%%%%
+%\printbibliography
+%\bibliography{Zotero.bib}
+\bibliography{references}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagebreak
+%%%%%%%%%%%%%%%%%%%%%
+% Figures and tables %
+%%%%%%%%%%%%%%%%%%%%%
+
+%%%% FIGURE 1 %%%%%
+
+ \begin{figure}[H]
+    \centering
+    \includegraphics[width=1\columnwidth]{../images/phha_photo5.jpg}
+    \caption{\small\textbf{CAPTION}}
+    \label{fig:Figure1}
+\end{figure}
+
+\pagebreak
+\newpage
+%%%%%%%%%%%%%%%
+
+
+
+\end{document}
