@@ -245,3 +245,9 @@ module load bcftools/1.9
 ```sh
 nohup bcftools mpileup -a DP,AD,INFO/AD -C 50 -d 250 -f ../assembly/PHHA_ref.fa -q 30 -Q 20 -I -b bam_list.txt -o ../vcf/PHHA.bcf > ../vcf/mpileup.log 2>&1 &
 ```
+
+Producing a vcf ready for filtering
+
+```sh
+nohup bcftools call -v -m -f GQ PHHA.bcf -O z -o PHHA.vcf.gz &>/dev/null &
+```
