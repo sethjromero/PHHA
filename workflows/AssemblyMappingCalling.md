@@ -8,7 +8,7 @@
     1c. [Clustering contigs for reference assembly](#1c-clustering-contigs-for-reference-assembly)  
     1d. [Indexing final assembly](#1d-indexing-final-assembly)  
 2. [Mapping](#2-mapping)
-
+3. [Variant calling](#3-variant-calling)
 
 
 ## 1. De novo reference assembly
@@ -232,11 +232,15 @@ tail -n 1 mapping.log
 
 ## 3. Variant calling
 
+From within `bams/`:
+
+```sh
+ls *.sorted.bam > bam_list.txt
+```
+
 ```sh
 module load bcftools/1.9
 ```
-
-
 
 ```sh
 nohup bcftools mpileup -a DP,AD,INFO/AD -C 50 -d 250 -f ../assembly/PHHA_ref.fa -q 30 -Q 20 -I -b bam_list.txt -o ../vcf/PHHA.bcf > ../vcf/mpileup.log 2>&1 &
