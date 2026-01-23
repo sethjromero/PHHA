@@ -1,17 +1,16 @@
 ---
 title:  |
   | **Phacelia hastata**
-  | <span style='font-size: 18pt'>*Filtering exploration*</span>
+  | <span style='font-size: 18pt'>*Filtering workflow & exploration of parameters*</span>
 output: 
   html_document:
-    theme: flatly
+    theme: cosmo
     highlight: tango
 ---
 
-
 ```{r, echo=FALSE}
 library(knitr)
-opts_chunk$set(echo = F, message = F, warning = F, fig.width = 10, fig.height = 4.5, fig.align = 'center')
+opts_chunk$set(echo = F, message = F, warning = F, fig.width = 10, fig.height = 10, fig.align = 'center')
 ```
 
 ```{r}
@@ -26,9 +25,49 @@ library(readr)
 library(data.table)
 library(colorspace)
 library(ggnewscale)
+library(kableExtra)
+library(forcats)
 ```
 
-```{r, fig.width=3, fig.height=5}
+Initially filtering on 3 things:
+
++ SNPs only (no indels) `--remove-indels`
++ biallelic sites only `--min-alleles 2` and `--max-alleles 2`
++ 1 SNP per contig (helps account for LD, our reads are typically <100 BP length) `--thin 100`
++ **OPTIONAL (but I typically do)** - filter on call quality. Our call qualities are typically very good so it doesn't get rid of much but might as well cut out the worst stuff `--minQ 30`
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--gzvcf PHHA.vcf.gz \
+--remove-indels \
+--min-alleles 2 \
+--max-alleles 2 \
+--thin 100 \
+--minQ 30 \
+--remove-filtered-all \
+--recode \
+--recode-INFO-all \
+--out PHHA.bithin.q30
+```
+
+Produces file **PHHA.bithin.q30.recode.vcf**
+
+Making a summary file to look at individual missingness
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.recode.vcf \
+--missing-indv \
+--out PHHA.bithin.q30
+```
+
+Produces file called **PHHA.bithin.q30.imiss**
+  
+**256 of 256 individuals**
+
+**669,819 SNPs**
+
+```{r, fig.width=6, fig.height=5}
 col37 <- c("#a1def0", "#b32728", "#4ed31b", "#bf209e", "#3f862d", 
            "#b32df9", "#99d683", "#74398b", "#ead624", "#4853fc", 
            "#fe8f06", "#395f97", "#1cf1a3", "#ed8bc7", "#7c440e", 
@@ -38,21 +77,97 @@ col37 <- c("#a1def0", "#b32728", "#4ed31b", "#bf209e", "#3f862d",
            "#2a2bf0", "#aebf8a", "#743502", "#bce333", "#e72525",
            "#fea53b", "#ce1365")
 
-ind_miss  <- read_delim("Artem.bithin.q30.imiss", 
+ind_miss  <- read_delim("../filtering/PHHA.bithin.q30.imiss", 
                         delim = "\t",
                         col_names = c("ind", "ndata", "nfiltered", "nmiss", "fmiss"), 
                         skip = 1) %>%
-    # next line should work for most sample naming conventions, but adjust as needed
-    mutate(Pop = paste(str_split_i(ind, '_', 1), str_split_i(ind, '_', 2), sep = '_'))
+    mutate(Pop = fct_rev(factor(str_split_i(ind, '_', 2))))
 
-imissFig <- ggplot(ind_miss, 
+imissFig1 <- ggplot(ind_miss, 
                    aes(x = fmiss, y = Pop, fill = Pop, color = Pop)) +
   geom_jitter(pch = 21, size = 2,
               position = position_jitter(height = 0.2)) +
   scale_fill_manual(values = col37) +
   scale_color_manual(values = darken(col37, 0.3)) +
+  scale_x_continuous(limits = c(0.63, 1)) +
   theme_bw() +
   theme(legend.position = 'none')
 
-imissFig
+imissFig1
 ```
+
+Just looking for some natural breaks here. Wanting to remove individuals that look like obvious outliers without drastically cutting certain populations or lowering within-population sampling. **0.88** looks like a decent threshold. If we wanted to be more aggressive, another option would be **0.85** (would remove another 11 individuals). Probably can't go much lower without losing `DA` and `CA` populations entirely.
+
+Below showing individual totals for each population based on **0.88** threshold.
+
+```{r, fig.width=6, fig.height=5}
+pop_sum <- filter(ind_miss, fmiss < 0.88) %>%
+  group_by(Pop) %>%
+  summarize(n = n())
+
+imissFig2 <- ggplot(ind_miss, 
+                   aes(x = fmiss, y = Pop, fill = Pop, color = Pop)) +
+  geom_jitter(pch = 21, size = 2,
+              position = position_jitter(height = 0.2),
+              alpha = ifelse(ind_miss$fmiss > 0.88, 0.25, 1)) +
+  geom_vline(xintercept = 0.88, color = 'red',
+             linetype = 'dashed', linewidth = 0.5) +
+  geom_text(data = pop_sum, aes(y = Pop, label = n),
+            x = 0.64,
+            size = 4,
+            fontface = 'bold') +
+  scale_fill_manual(values = col37) +
+  scale_color_manual(values = darken(col37, 0.3)) +
+  scale_x_continuous(limits = c(0.63, 1)) +
+  theme_bw() +
+  theme(legend.position = 'none')
+
+imissFig2
+```
+
+Individual depth (averaged across all loci). Filtered out individuals >88% missigness as identified above.
+
+**245 of 256 individuals**
+
+**669,819 SNPs**
+
+```{r, fig.width=10, fig.height=4}
+var_depth <- read_delim("../filtering/PHHA.bithin.q30.i88.ldepth.mean", delim = "\t",
+           col_names = c("chr", "pos", "mean_depth", "var_depth"), skip = 1)
+
+a_freq <- read_delim("../filtering/PHHA.bithin.q30.i88.frq", delim = "\t",
+                     col_names = c("chr", "pos", "nalleles", "nchr", "a1", "a2"), skip = 1) %>%
+  mutate(fmiss = (max(nchr)-nchr)/max(nchr))
+
+full_depth <- full_join(var_depth, a_freq, by = c("chr", "pos")) %>%
+  mutate(depth_adj = mean_depth*(1/(1-fmiss)))
+
+colors <- moma.colors('OKeeffe', type = 'continuous', n = 200)
+
+adpth_all <- ggplot(full_depth, aes(x = fmiss, y = depth_adj)) +
+  geom_point(alpha = 0.25, pch = 16, size = 0.3, color = 'black') +
+  annotate(geom = 'rect', color = 'red', linewidth = 0.5,
+           xmin = -0.001, xmax = 0.5, ymin = 0, ymax = 25, fill = 'transparent') +
+  scale_y_continuous(limits = c(0, 100)) +
+  theme_bw() +
+  theme(legend.position = 'none')
+
+var_adj <- ggplot(full_depth, aes(x = fmiss, y = depth_adj)) +
+  geom_point(alpha = 0.05, pch = 16, size = 0.6, color = 'black') +
+  geom_density_2d_filled(alpha = 0.6, bins = 200, contour_var = 'count') +
+  scale_fill_manual(values = colors) +
+  scale_y_continuous(limits = c(0, 25)) +
+  scale_x_continuous(limits = c(0, 0.5)) +
+  theme_bw() +
+  theme(legend.position = 'none')
+
+adpth_all + var_adj
+```
+
+```{r, eval=FALSE, echo=TRUE}
+snp_set <- filter(full_depth, depth_adj < 12) %>%
+  select(chr, pos)
+
+write_delim(snp_set, '../filtering/sites_maxdp12.tsv', delim = '\t', col_names = F)
+```
+
