@@ -4,6 +4,10 @@
     <img width="70%" src="images/phha_photo5.jpg"> 
 </p>
 
+## View rendered HTML workflows
+
++ [SNP filtering](https://htmlpreview.github.io/?https://github.com/sethjromero/PHHA/blob/main/workflows/Filtering_visualExploration.html)
+
 ## Ponderosa directory organization
 
 ```mermaid
