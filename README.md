@@ -2,12 +2,13 @@
 
 <p align="center" width="100%">
     <img width="60%" src="images/phha_photo5.jpg"> 
-    <img width="70%" src="images/sample_map.png"> 
 </p>
 
-## View rendered HTML workflows
+## Sampling map
 
-+ [SNP filtering](https://htmlpreview.github.io/?https://github.com/sethjromero/PHHA/blob/main/workflows/Filtering_visualExploration.html)
+<p align="center" width="100%">
+    <img width="80%" src="images/sample_map.png"> 
+</p>
 
 ## Ponderosa directory organization
 
@@ -41,6 +42,10 @@ All other analyses can be organized into associated directory (e.g. maps, popula
 + input statistical files (e.g. genotype probability matrices, diversity estimates by population, etc.)
 + Rmarkdown/Python scripts for stats or figure making
 + Output figures - but be conscious about file sizes if they're exploratory. Total repo size shouldn't exceed ~ 1 GB
+
+## View rendered HTML workflows
+
++ [SNP filtering](https://htmlpreview.github.io/?https://github.com/sethjromero/PHHA/blob/main/workflows/Filtering_visualExploration.html)
 
 ## Latex organization
 
