@@ -1,0 +1,231 @@
+---
+title:  |
+  | **PHHA Sample Map**
+output: 
+  html_document:
+    theme: cosmo
+    highlight: tango
+---
+
+
+```{r, echo=FALSE}
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F, fig.width = 8, fig.height = 8, fig.align = 'center')
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(ggrepel)
+library(patchwork)
+library(MoMAColors)
+library(readr)
+library(patchwork)
+library(colorspace)
+library(ggnewscale)
+library(tidyterra)
+library(rnaturalearth)
+library(elevatr)
+library(sf)
+library(terra)
+```
+
+```{r}
+cList <- c('United States of America', 'Canada', 'Mexico')
+mapDir <- c('map_layers/')
+
+states <- ne_load(scale = 10, type = 'admin_1_states_provinces', 
+                  destdir = mapDir, returnclass = 'sf') %>%
+  filter(geonunit %in% cList)
+rivers_major <- ne_load(scale = 10, type = 'rivers_lake_centerlines', 
+                        destdir = mapDir, returnclass = 'sf')
+rivers_minor <- ne_load(scale = 10, type = 'rivers_north_america', 
+                        destdir = mapDir, returnclass = 'sf')
+lakes_major <- ne_load(scale = 10, type = 'lakes',
+                       destdir = mapDir, returnclass = 'sf')
+lakes_minor <- ne_load(scale = 10, type = 'lakes_north_america', 
+                       destdir = mapDir, returnclass = 'sf')
+
+prjPoints <- function(data){
+  output = dplyr::select(data, Long, Lat) %>%
+    relocate(Long, .before = Lat) %>%
+    as.matrix() %>%
+    st_multipoint() %>%
+    st_sfc(crs = 4326) %>%
+    st_transform(crs = target_crs) %>%
+    .[[1]] %>% 
+    as.matrix() %>%
+    as.data.frame() %>%
+    rename(prjy = 2, prjx = 1) %>%
+    cbind(data)
+  return(output)
+}
+```
+
+```{r, include=FALSE, fig.width=14, fig.height=12}
+zoom_to <- c(-115, 43.5)
+
+zoom_level <- 5.25
+
+C <- 40075016.686
+x_offset <- 0
+y_offset <- 150000
+
+
+x_span <- (C / 2^(zoom_level)) + x_offset
+y_span <- (C / 2^(zoom_level)) + y_offset
+
+target_crs <- sprintf('+proj=laea +lon_0=%f +lat_0=%f', zoom_to[1], zoom_to[2])
+zoom_to_xy <- st_transform(st_sfc(st_point(zoom_to), crs = 4326), crs = target_crs)
+
+disp_window <- st_sfc(st_point(st_coordinates(zoom_to_xy - c(x_span / 2, y_span / 2))),
+                      st_point(st_coordinates(zoom_to_xy + c(x_span / 2, y_span / 2))),
+                      crs = target_crs)
+elev_window <- st_sfc(st_point(st_coordinates(zoom_to_xy - c((x_span*1.08) / 2, (y_span*1.05) / 2))),
+                      st_point(st_coordinates(zoom_to_xy + c((x_span*1.08) / 2, (y_span*1.1) / 2))),
+                      crs = target_crs)
+
+countries <- ne_load(scale = 10, type = 'admin_0_countries', 
+                     destdir = mapDir, returnclass = 'sf') %>%
+  filter(GEOUNIT %in% cList) %>%
+  st_transform(crs = target_crs)
+
+bg_poly <- st_sfc(st_point(st_coordinates(zoom_to_xy - c((x_span*1.4) / 2, (y_span*1.4) / 2))),
+                  st_point(st_coordinates(zoom_to_xy + c((x_span*1.4) / 2, (y_span*1.4) / 2))),
+                  crs = target_crs) %>%
+  st_bbox() %>%
+  st_as_sfc()
+
+elev_rast <- get_elev_raster(locations = elev_window, z = 7, clip = 'tile') %>%
+  rast() %>%
+  mask(vect(st_transform(countries, crs = target_crs)))
+
+elev_df <- as.data.frame(elev_rast, xy = TRUE) %>%
+  rename(alt = 3)
+sl <- terrain(elev_rast, "slope", unit = "radians")
+asp <- terrain(elev_rast, "aspect", unit = "radians")
+hill_df <- shade(sl, asp, 
+      # angle = 45, 
+      angle = 30,
+      direction = 300,
+      normalize= TRUE) %>%
+  as.data.frame(xy = TRUE)
+
+elevLims <- minmax(elev_rast) %>%
+  as.integer() + c(450, -800)
+```
+
+```{r}
+pal <- hypso.colors(n = 256, palette = 'wiki-schwarzwald-cont')
+
+hcl <- hex2RGB(pal) %>%
+  as('polarLUV')
+
+hcl@coords[,'C'] <- hcl@coords[,'C'] * 0.95
+idx <- (hcl@coords[, "H"] <= 90 | hcl@coords[, "H"] >= 160) & hcl@coords[,'C'] > 1
+hcl@coords[idx, "C"] <- hcl@coords[idx, "C"] * 0.4
+
+cols_mod <- hex(polarLUV(L = hcl@coords[,'L'],
+                         C = hcl@coords[,'C'],
+                         H = hcl@coords[,'H']))
+```
+
+```{r}
+baseMap <- ggplot(countries) + 
+  geom_sf(data = bg_poly, fill = 'lightblue', alpha = 0.65) +
+  geom_raster(data = hill_df,
+              aes(x, y, fill = hillshade),
+              show.legend = FALSE,
+              # alpha = 0.8) +
+              alpha = 1) +
+  # scale_fill_distiller(palette = 'Greys') +
+  scale_fill_gradient2(low = 'gray10', mid = 'grey95', high = "white", midpoint = 180) +
+  new_scale_fill() +
+  geom_raster(data = elev_df,
+              aes(x, y, fill = alt),
+              # alpha = 0.33,
+              alpha = 0.3,
+              show.legend = FALSE) +
+  # scale_fill_hypso_c(palette = saturation('dem_poster', scalefac(0.5)),
+  #                    limits = elevLims) +
+  # scale_fill_continuous_sequential(palette = "Terrain",
+  #                                  limits = elevLims) +
+  scale_fill_gradientn(colours = cols_mod,
+                       limits = elevLims) +
+  geom_sf(data = rivers_major, color = "#0978AB", linewidth = 0.1) + 
+  # geom_sf_text(data = rivers_minor, aes(label = name)) +
+  geom_sf(data = rivers_minor, color = '#0978AB', linewidth = 0.1) +
+  geom_sf(data = lakes_major, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
+  geom_sf(data = lakes_minor, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
+  geom_sf(data = states, fill = NA, color = 'grey20', linewidth = 0.4) +
+  coord_sf(xlim = st_coordinates(disp_window)[,'X'],
+           ylim = st_coordinates(disp_window)[,'Y']) +
+  labs(x = 'Longitude',
+       y = 'Latitude') +
+  theme_bw() +
+  theme(panel.border = element_rect(linewidth = 1.5, color = 'black'),
+        legend.position = 'none',
+        axis.title.y.left = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = 2),
+        axis.title.x.bottom = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = -1),
+        axis.text = element_text(size = 14),
+        axis.ticks.length = unit(0.1, 'cm'),
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill = 'white'),
+        plot.margin = margin(t = 10, r = 30, b = 10, l = 10, unit = 'pt'))
+
+# baseMap
+```
+
+
+```{r}
+phha <- read.csv('PHHA_latlong.csv') %>%
+  rename(Pop = Two.letter.abbrev) %>%
+  prjPoints()
+```
+
+
+```{r, include=FALSE, fig.width=9.2, fig.height=10}
+col26 <- c("#a1def0", "#b32728", "#4ed31b", "#bf209e", "#3f862d", 
+           "#b32df9", "#99d683", "#74398b", "#ead624", "#4853fc", 
+           "#fe8f06", "#395f97", "#1cf1a3", "#ed8bc7", "#7c440e", 
+           "#c6c0fe", "#444a1e", "#efbba2", "#369094", "#fa756b",
+           "#88e99a", "#256b33", "#6dc5dd", "#154975", "#628df2",
+           "#874fbf")
+
+
+phhaMap <- baseMap +
+  new_scale_fill() +
+  scale_fill_manual(values = col26) +
+  scale_color_manual(values = darken(col26, 0.3)) +
+  geom_label_repel(data = phha, 
+                   aes(x = prjx, y = prjy, label = Pop, fill = Pop, color = Pop),
+                   fontface = "bold", size = 6.5, box.padding = 0.75,
+                   label.padding = 0.3,
+                   label.r = unit(5, "pt"),
+                   label.size = 2,
+                   seed = 1234) +
+  geom_label_repel(data = phha, 
+                   aes(x = prjx, y = prjy, label = Pop, fill = Pop),
+                   fontface = "bold", size = 6.5, box.padding = 0.75,
+                   label.padding = 0.3,
+                   label.r = unit(5, "pt"),
+                   label.size = NA,
+                   color = 'black',
+                   seed = 1234) +
+  geom_point(data = phha, aes(x = prjx, y = prjy), 
+             size = 4, 
+             color = 'black', 
+             fill = 'white', 
+             pch = 21)
+
+phhaMap
+
+ggsave('../images/sample_map.png', phhaMap, width = 9.2, height = 10, dpi = 400)
+```
+

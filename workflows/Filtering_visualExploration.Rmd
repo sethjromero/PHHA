@@ -26,7 +26,6 @@ library(data.table)
 library(colorspace)
 library(ggnewscale)
 library(kableExtra)
-library(forcats)
 ```
 
 Initially filtering on 3 things:
@@ -81,7 +80,7 @@ ind_miss  <- read_delim("../filtering/PHHA.bithin.q30.imiss",
                         delim = "\t",
                         col_names = c("ind", "ndata", "nfiltered", "nmiss", "fmiss"), 
                         skip = 1) %>%
-    mutate(Pop = fct_rev(factor(str_split_i(ind, '_', 2))))
+    mutate(Pop = str_split_i(ind, '_', 2))
 
 imissFig1 <- ggplot(ind_miss, 
                    aes(x = fmiss, y = Pop, fill = Pop, color = Pop)) +
@@ -169,5 +168,387 @@ snp_set <- filter(full_depth, depth_adj < 12) %>%
   select(chr, pos)
 
 write_delim(snp_set, '../filtering/sites_maxdp12.tsv', delim = '\t', col_names = F)
+```
+
+```{r, fig.height=6, fig.width=8}
+var_freq <- filter(full_depth, depth_adj < 12)
+var_freq$maf <- var_freq %>% dplyr::select(a1, a2) %>% apply(1, function(z) min(z))
+
+maf_set <- matrix(nrow = 51, ncol = 20)
+maf_set[,1] <- seq(0, 0.50, 0.01)
+amiss_set <- seq(95, 5, -5)
+for(i in 1:nrow(maf_set)){
+  for(j in 1:length(amiss_set)){
+    maf_set[i,(j+1)] <- as.integer(nrow(filter(var_freq, maf > ((i-1)/100) & fmiss < (amiss_set[j]/100))))
+  }
+}
+ind_with <- as.data.frame(maf_set)
+
+fNames <- vector()
+for(i in 1:length(amiss_set)){
+  fNames[i] = paste('fmiss', as.character(amiss_set[i]), sep = '_')
+}
+colnames(ind_with)[2:20] <- fNames
+
+comb <- ind_with %>%
+  pivot_longer(cols = 2:20, names_to = 'fmiss', values_to = 'snps')
+
+param_compare <- ggplot(comb, aes(x = V1, y = snps, group = fmiss, label = fmiss, color = fmiss)) +
+  geom_line(linewidth = 1) +
+  scale_x_continuous(breaks = seq(-0.02, 0.5, 0.02)) +
+  scale_y_continuous(breaks = seq(0, 100000, 10000)) +
+  coord_cartesian(xlim = c(-0.02, 0.11),
+                  ylim = c(0, 50000)) +
+  geom_label_repel(size = ifelse(comb$V1 == 0, 4, 0),
+                   alpha = ifelse(comb$V1 == 0, 1, 0),
+                   color = 'black',
+                   max.overlaps = 40,
+                   label.padding = 0.1, box.padding = 0.65) +
+  scale_color_moma_d(palette_name = 'Warhol') +
+  labs(x = 'MAF',
+       y = 'Total Loci') +
+  ggtitle('Loci Retention Rate') +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = 'none')
+
+param_compare
+```
+
+```{r}
+makePopId <- function(fileIndv){
+  PopIDdf = read.table(fileIndv, sep="\t") %>%
+    as.data.frame() %>%
+    rename(All = V1) %>%
+    mutate(Pop = str_split_i(All, '_', 2))
+  return(PopIDdf)
+}
+
+pca1234FUN <- function(file012, popID, colorSet, grouping){
+  df012 = fread(file012, sep = '\t', data.table = F)[,-1] %>%
+    as.matrix() %>%
+    apply(2, function(d) gsub(-1, NA, d, fixed=TRUE)) %>%
+    apply(2, function(d) as.numeric(d))
+  colmean = apply(df012, 2, mean, na.rm=TRUE)
+  normalize = matrix(nrow = nrow(df012), ncol = ncol(df012))
+  af = colmean/2
+  for (m in 1:length(af)){
+    nr = df012[ ,m]-colmean[m]
+    dn = sqrt(af[m]*(1-af[m]))
+    normalize[ ,m] = nr/dn
+  }
+  normalize[is.na(normalize)] = 0
+  pca012 = prcomp(normalize, scale. = FALSE, center = FALSE)
+  pca012_loading = pca012$x
+  pc1var = formatC(((summary(pca012)$importance[2,1])*100), digits = 1, format = 'f')
+  pc2var = formatC(((summary(pca012)$importance[2,2])*100), digits = 1, format = 'f')
+  pc3var = formatC(((summary(pca012)$importance[2,3])*100), digits = 1, format = 'f')
+  pc4var = formatC(((summary(pca012)$importance[2,4])*100), digits = 1, format = 'f')
+  pc5var = formatC(((summary(pca012)$importance[2,5])*100), digits = 1, format = 'f')
+  pc6var = formatC(((summary(pca012)$importance[2,6])*100), digits = 1, format = 'f')
+  pca_df = pca012_loading[,1:6]
+  pca_df = cbind(popID, pca_df) 
+  pca12_pop = ggplot(data = pca_df, aes(x = PC1, y = PC2, 
+                                        fill = .data[[grouping]],
+                                        color = .data[[grouping]])) +
+    geom_point(pch = 21, size = 3) + 
+    xlab(paste("PC",1," (",pc1var,"%)",sep="")) +
+    ylab(paste("PC",2," (",pc2var,"%)",sep="")) +
+    scale_fill_manual(name = paste(grouping, ':', sep = ''), values = colorSet) +
+    scale_color_manual(name = paste(grouping, ':', sep = ''), values = darken(colorSet, 0.3)) +
+    theme_bw() + 
+    theme(legend.position = 'none',
+          axis.text = element_text(size = 13),
+          axis.title = element_text(size = 16, color = "black",
+                                    face = "bold", vjust = 1),
+          panel.border = element_rect(linewidth = 1.5, color = "black"),
+          legend.text = element_text(size = 11),
+          legend.title = element_text(size = 13, face = "bold"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+  pca34_pop = ggplot(data = pca_df, aes(x = PC3, y = PC4,
+                                        fill = .data[[grouping]],
+                                        color = .data[[grouping]])) +
+    geom_point(pch = 21, size = 3) + 
+    xlab(paste("PC",3," (",pc3var,"%)",sep="")) +
+    ylab(paste("PC",4," (",pc4var,"%)",sep="")) +
+    scale_fill_manual(name = paste(grouping, ':', sep = ''), values = colorSet) +
+    scale_color_manual(name = paste(grouping, ':', sep = ''), values = darken(colorSet, 0.3)) +
+    theme_bw() + 
+    theme(legend.position = 'none',
+          axis.text = element_text(size = 13),
+          axis.title = element_text(size = 16, color = "black",
+                                    face = "bold", vjust = 1),
+          panel.border = element_rect(linewidth = 1.5, color = "black"),
+          legend.text = element_text(size = 11),
+          legend.title = element_text(size = 13, face = "bold"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+  finalPatch = pca12_pop + pca34_pop + plot_layout(ncol = 2)
+  return(finalPatch)
+}
+
+fwStd <- function(file012, popID, xAxis, yAxis, colorSet, grouping){
+  df012 = fread(file012, sep = '\t', data.table = F)[,-1] %>%
+    as.matrix() %>%
+    apply(2, function(d) gsub(-1, NA, d, fixed=TRUE)) %>%
+    apply(2, function(d) as.numeric(d))
+  colmean = apply(df012, 2, mean, na.rm=TRUE)
+  normalize = matrix(nrow = nrow(df012), ncol = ncol(df012))
+  af = colmean/2
+  for (m in 1:length(af)){
+    nr = df012[ ,m]-colmean[m]
+    dn = sqrt(af[m]*(1-af[m]))
+    normalize[ ,m] = nr/dn
+  }
+  normalize[is.na(normalize)] = 0
+  pca012 = prcomp(normalize, scale. = FALSE, center = FALSE)
+  pcXvar = formatC(((summary(pca012)$importance[2,as.integer(str_sub(xAxis, 3, 3))])*100), 
+                   digits = 1, format = 'f')
+  pcYvar = formatC(((summary(pca012)$importance[2,as.integer(str_sub(yAxis, 3, 3))])*100), 
+                   digits = 1, format = 'f')
+  pca012_loading = pca012$x
+  pca_df = pca012_loading[,1:6]
+  pca_df = cbind(popID, pca_df)
+  pca_mean <- pca_df %>% 
+    group_by(.data[[grouping]]) %>% 
+    summarize(PC1_mean=mean(PC1),PC2_mean=mean(PC2),PC3_mean=mean(PC3),
+              PC4_mean=mean(PC4),PC5_mean=mean(PC5),PC6_mean=mean(PC6))
+  pca_df <- left_join(pca_df,pca_mean)
+  pca_fw <- ggplot(data = pca_mean, 
+                   aes(x = .data[[paste(xAxis,'mean',sep='_')]],
+                       y = .data[[paste(yAxis,'mean',sep='_')]],
+                       fill = .data[[grouping]],
+                       color = .data[[grouping]], 
+                       label = .data[[grouping]])) +
+    geom_segment(data=pca_df,
+                 aes(x = .data[[xAxis]],y = .data[[yAxis]],
+                     xend = .data[[paste(xAxis,'mean',sep='_')]],
+                     yend = .data[[paste(yAxis,'mean',sep='_')]]),
+                 linewidth = 0.3) +
+    geom_label_repel(color = 'black',
+                     max.overlaps = 40, label.padding = 0.1, box.padding = 0.65,
+                     label.size = 0.1,
+                     alpha = 0.5,
+                     size = 2,
+                     segment.size = 0.1) +
+    geom_point(size = 1, 
+               stroke = 0.5, pch = 21) + 
+    xlab(paste("PC",(str_sub(xAxis, 3, 3))," (",pcXvar,"%)",sep="")) +
+    ylab(paste("PC",(str_sub(yAxis, 3, 3))," (",pcYvar,"%)",sep="")) +
+    scale_fill_manual(name = paste(grouping, ':', sep = ''), values = colorSet) +
+    scale_color_manual(name = paste(grouping, ':', sep = ''), values = darken(colorSet, 0.3)) +
+    theme_bw() +
+    theme(legend.position = 'none',
+          axis.text = element_text(size = 10),
+          axis.title.y.left = element_text(size = 16,
+                                           face = 'bold',
+                                           vjust = 0),
+          axis.title.x.bottom = element_text(size = 16,
+                                             face = 'bold',
+                                             vjust = 1),
+          panel.border = element_rect(linewidth = 1.5, color = "black"),
+          legend.text = element_text(size = 13),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.margin = margin(t = 5, r = 5, b = 5, l = 5, unit = 'pt'))
+  return(pca_fw)
+}
+```
+
+## Allelic missingness <30% (allele in minimum 172 of 245)
+
+<style>
+  hr.thick {
+    height: 4px;
+    background-color: lightgrey;
+    border: 2px solid black;
+  }
+</style>
+
+<hr>
+
+#### **MAF = 0.01** (minor allele in >= 3 individuals)
+
+#### **15,009 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Apop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012.indv')
+Apca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012', Apop, col37, 'Pop')
+Afw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012', Apop, 'PC1', 'PC2', col37, 'Pop')
+Afw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012', Apop, 'PC3', 'PC4', col37, 'Pop')
+
+A5 <- Apca + Afw + Afw2
+A5
+```
+
+<hr class="thick">
+
+#### **MAF = 0.02** (minor allele in >= 5 individuals)
+
+#### **8,993 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Gpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012.indv')
+Gpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012', Gpop, col37, 'Pop')
+Gfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012', Gpop, 'PC1', 'PC2', col37, 'Pop')
+Gfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012', Gpop, 'PC3', 'PC4', col37, 'Pop')
+
+G5 <- Gpca + Gfw + Gfw2
+G5
+```
+
+<hr class="thick">
+
+#### **MAF = 0.03** (minor allele in >= 8 individuals)
+
+#### **6,811 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Bpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012.indv')
+Bpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012', Bpop, col37, 'Pop')
+Bfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012', Bpop, 'PC1', 'PC2', col37, 'Pop')
+Bfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012', Bpop, 'PC3', 'PC4', col37, 'Pop')
+
+B5 <- Bpca + Bfw + Bfw2
+B5
+```
+
+<hr class="thick">
+
+#### **MAF = 0.04** (minor allele in >= 8 individuals)
+
+#### **5,617 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Hpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012.indv')
+Hpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012', Hpop, col37, 'Pop')
+Hfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012', Hpop, 'PC1', 'PC2', col37, 'Pop')
+Hfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012', Hpop, 'PC3', 'PC4', col37, 'Pop')
+
+H5 <- Hpca + Hfw + Hfw2
+H5
+```
+
+<hr class="thick">
+
+#### **MAF = 0.05** (minor allele in >= 13 individuals)
+
+#### **4,843 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Cpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012.indv')
+Cpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012', Cpop, col37, 'Pop')
+Cfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012', Cpop, 'PC1', 'PC2', col37, 'Pop')
+Cfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012', Cpop, 'PC3', 'PC4', col37, 'Pop')
+
+C5 <- Cpca + Cfw + Cfw2
+C5
+```
+
+<hr class="thick">
+
+#### **MAF = 0.06** (minor allele in >= 13 individuals)
+
+#### **4,276 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Ipop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012.indv')
+Ipca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012', Ipop, col37, 'Pop')
+Ifw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012', Ipop, 'PC1', 'PC2', col37, 'Pop')
+Ifw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012', Ipop, 'PC3', 'PC4', col37, 'Pop')
+
+I5 <- Ipca + Ifw + Ifw2
+I5
+```
+
+```{r, fig.width=5, fig.height=5}
+snp_var_ratios <- tibble(maf = seq(0.01, 0.06, 0.01),
+                         snps = c(15009, 8993, 6811, 5617, 4843, 4276),
+                         pc1 = c(0.027, 0.037, 0.043, 0.048, 0.052, 0.054),
+                         pc2 = c(0.02, 0.025, 0.028, 0.03, 0.031, 0.032),
+                         pc3 = c(0.018, 0.02, 0.022, 0.023, 0.023, 0.023),
+                         pc4 = c(0.015, 0.018, 0.019, 0.02, 0.021, 0.021)) %>%
+  mutate('pc1+2' = pc1 + pc2,
+         'pc1+2+3' = pc1 + pc2 + pc3,
+         'pc1+2+3+4' = pc1 + pc2 + pc3 + pc4) %>%
+  pivot_longer(cols = c('pc1', 'pc1+2', 'pc1+2+3', 'pc1+2+3+4'), names_to = 'axes',
+               values_to = 'var_exp')
+
+second <- distinct(snp_var_ratios, maf, snps)
+
+coeff <- 110000
+
+by1 <- ggplot() +
+  geom_line(data = snp_var_ratios, aes(x = maf, y = var_exp, group = axes, color = axes)) +
+  geom_line(data = second, aes(x = maf, y = snps / coeff)) +
+  geom_point(pch = 16) +
+    scale_y_continuous(limits = c(0,0.15),
+    name = "Total Variance Explained",
+    sec.axis = sec_axis(~.*coeff, name="Total SNPs")
+  ) + 
+  theme_bw() +
+  theme(legend.position = 'bottom')
+
+by1
+```
+
+
+## Allelic missingness <20% (allele in minimum 196 of 245)
+
+<style>
+  hr.thick {
+    height: 4px;
+    background-color: lightgrey;
+    border: 2px solid black;
+  }
+</style>
+
+<hr>
+
+#### **MAF = 0.01** (minor allele in >= 3 individuals)
+
+#### **8,488 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Dpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012.indv')
+Dpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012', Dpop, col37, 'Pop')
+Dfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012', Dpop, 'PC1', 'PC2', col37, 'Pop')
+Dfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012', Dpop, 'PC3', 'PC4', col37, 'Pop')
+
+D5 <- Dpca + Dfw + Dfw2
+D5
+```
+
+<hr class="thick">
+
+#### **MAF = 0.03** (minor allele in >= 8 individuals)
+
+#### **4,030 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Epop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012.indv')
+Epca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012', Epop, col37, 'Pop')
+Efw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012', Epop, 'PC1', 'PC2', col37, 'Pop')
+Efw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012', Epop, 'PC3', 'PC4', col37, 'Pop')
+
+E5 <- Epca + Efw + Efw2
+E5
+```
+
+<hr class="thick">
+
+#### **MAF = 0.05** (minor allele in >= 13 individuals)
+
+#### **2,900 SNPs**
+
+```{r, fig.width=10, fig.height=8}
+Fpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012.indv')
+Fpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012', Fpop, col37, 'Pop')
+Ffw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012', Fpop, 'PC1', 'PC2', col37, 'Pop')
+Ffw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012', Fpop, 'PC3', 'PC4', col37, 'Pop')
+
+F5 <- Fpca + Ffw + Ffw2
+F5
 ```
 

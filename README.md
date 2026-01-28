@@ -1,7 +1,8 @@
 # ***Phacelia hastata*** (silverleaf scorpionweed)
 
 <p align="center" width="100%">
-    <img width="70%" src="images/phha_photo5.jpg"> 
+    <img width="60%" src="images/phha_photo5.jpg"> 
+    <img width="70%" src="images/sample_map.png"> 
 </p>
 
 ## View rendered HTML workflows
