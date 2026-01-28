@@ -17,3 +17,13 @@ Things to do this week:
 ### Progress goals for the 15 week race:
 
 **1/28/26:** Goal for settling on final genotype matrix/and or having genotype probabilites from entropy.
+
+## Week 2; 1/28/26
+
+Cameron:
+
+Seth:
+
+Ellen:
+
+Tom:
