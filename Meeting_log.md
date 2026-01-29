@@ -38,3 +38,7 @@ Tom:
 Im putting a list of analyses/considerations here I think we might want to explore before going too far.
 
 - Get some background from bryce on the DA and PM populations. Is there potential for these to be sister species or admixed wiht sister species (bc we know they can/do hybridize)
+
+- Genetic diversity (He, Ho, theta), and how its arranged geographically
+
+- 
