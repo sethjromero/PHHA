@@ -39,6 +39,9 @@ Im putting a list of analyses/considerations here I think we might want to explo
 
 - Get some background from bryce on the DA and PM populations. Is there potential for these to be sister species or admixed wiht sister species (bc we know they can/do hybridize)
 
+- The two weird populations that are popping out: It might be a good idea to have a look at what happens to PCA if we take those two out. Just considering being thorough here before asking bryce if there is anything we should suspect about those two (sister species, or admixed with sister species?)
+
 - Genetic diversity (He, Ho, theta), and how its arranged geographically
 
-- 
+
+
