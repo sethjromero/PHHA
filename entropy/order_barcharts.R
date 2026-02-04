@@ -399,8 +399,7 @@ for (i in 2:max_k){
   df = kn_data[i - 1][[1]]
   plot_one_df(df, pop_order = my_order)
 }
-# save both sets
-# plot each k result in separate plot (save)
+
 for (i in 2:max_k){
   admix_palette = admix_palette_full
   df = kn_data[i-1][[1]]
@@ -419,6 +418,38 @@ for (i in 2:max_k){
   df = kn_data[i-1][[1]]
   png(
     filename = str_glue("plots/Admixture_k{i}_Pops.png"),
+    width = 2000,
+    height = 1600,
+    res = 200
+  )
+  plot_pop_means(df, pop_order = my_order)
+  dev.off()
+}
+
+# match the pi chart colors
+col_pie <- c('#ba039b', '#ead624', '#154975', '#fe8f06', '#4ed31b', 
+             '#ffa5ca', '#78F5C1')
+
+# save both sets
+# plot each k result in separate plot (save)
+for (i in 2:max_k){
+  admix_palette = col_pie
+  df = kn_data[i-1][[1]]
+  png(
+    filename = str_glue("plots/Admixture_k{i}_Indivs_Match.png"),
+    width = 2000,
+    height = 1600,
+    res = 200
+  )
+  plot_one_df(df, pop_order = my_order)
+  dev.off()
+}
+# plot each k result in separate plot (save)
+for (i in 2:max_k){
+  admix_palette = col_pie
+  df = kn_data[i-1][[1]]
+  png(
+    filename = str_glue("plots/Admixture_k{i}_Pops_Match.png"),
     width = 2000,
     height = 1600,
     res = 200
