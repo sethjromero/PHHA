@@ -110,7 +110,8 @@
 
 
 %%%%% Target Journals %%%%%%
-
+% Annals of Botany
+% Journal of Heredity
 % Molecular Ecology 
 
 
@@ -175,10 +176,13 @@ Checking citations \citep{rieseberg_chromosomal_2001, petit_glacial_2003, rellst
 \section*{MATERIALS AND METHODS}
 %%%%%%%%%%%%%%
 
-\subsection*{Population and subspecies}
+\subsection*{Population sampling}
+
+We sampled \emph{Phacelia hastata} from approximately 35 populations distributed across the northern Great Basin, Snake River Plain, and the Northern Rocky Mountains (Table~1). Sampling locations were selected to span major geographic regions and environmental gradients across the species' northern range. At each site, fresh leaf tissue was collected from 10--20 adult individuals, with sampled plants spaced at least 50--100~m apart to reduce the likelihood of sampling close relatives. Leaf material was placed immediately into sealed bags containing silica gel and allowed to dry at ambient temperature prior to DNA extraction. Genomic DNA was extracted from dried leaf tissue using a high-throughput modified CTAB protocol implemented by Ag-Biotech (Monterey, CA, USA). DNA quantity and quality were assessed using a QiExpert microfluidics spectrophotometer (Qiagen Inc., CA, USA), and samples meeting minimum concentration thresholds ($\geq$15~ng/$\mu$L) and purity ratios (260/280 between 1.7 and 2.2) were retained for downstream library preparation.
 
 \subsection*{Reduced representation library preparation and variant calling}
 
+Reduced-representation genomic libraries for high throughput sequencing were generated using a double-digest RAD sequencing (ddRADseq) approach following established protocols (Parchman et al.\ 2012; Peterson et al.\ 2012). Briefly, genomic DNA from each individual was digested using the restriction enzymes \emph{EcoRI} and \emph{MseI}. Custom Illumina-compatible adapters containing unique inline barcodes (8--10~bp) were ligated to digested fragments, allowing multiplexing of individuals into a single library. Adapter-ligated fragments were amplified using a high-fidelity proofreading polymerase (iProof High-Fidelity DNA Polymerase; Bio-Rad Inc.) and pooled in equimolar concentrations. Libraries were size-selected using a Pippin Prep electrophoresis system (Sage Science, Beverly, MA, USA) to isolate fragments between 350 and 450~bp. Final libraries were sequenced on an Illumina NovaSeq platform using S2 chemistry at the University of Texas Genome Sequencing and Analysis Facility. Following sequencing, raw reads were processed using the \texttt{tapioca} pipeline, which uses \texttt{bowtie} (Langmead et al. , 2009) and contaminant databases to align and remove adapter contamination and non-target sequences. Reads were demultiplexed using a custom script that allows correction of one to two base errors within barcode regions and trims residual restriction site sequences, resulting in high-quality reads with an average length of approximately 85--90~bp.
 \subsection*{Population genetic analyses}
 
 \begin{itemize}
