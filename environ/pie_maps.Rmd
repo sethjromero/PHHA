@@ -1,0 +1,295 @@
+---
+title:  |
+  | **PHHA Ancestry Pie Maps**
+output: 
+  html_document:
+    theme: cosmo
+    highlight: tango
+---
+
+
+```{r, echo=FALSE}
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F, fig.width = 8, fig.height = 8, fig.align = 'center')
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(ggplot2)
+library(ggrepel)
+library(patchwork)
+library(MoMAColors)
+library(readr)
+library(patchwork)
+library(colorspace)
+library(ggnewscale)
+library(tidyterra)
+library(rnaturalearth)
+library(elevatr)
+library(sf)
+library(terra)
+library(scatterpie)
+```
+
+```{r}
+cList <- c('United States of America', 'Canada', 'Mexico')
+mapDir <- c('map_layers/')
+
+states <- ne_load(scale = 10, type = 'admin_1_states_provinces', 
+                  destdir = mapDir, returnclass = 'sf') %>%
+  filter(geonunit %in% cList)
+rivers_major <- ne_load(scale = 10, type = 'rivers_lake_centerlines', 
+                        destdir = mapDir, returnclass = 'sf')
+rivers_minor <- ne_load(scale = 10, type = 'rivers_north_america', 
+                        destdir = mapDir, returnclass = 'sf')
+lakes_major <- ne_load(scale = 10, type = 'lakes',
+                       destdir = mapDir, returnclass = 'sf')
+lakes_minor <- ne_load(scale = 10, type = 'lakes_north_america', 
+                       destdir = mapDir, returnclass = 'sf')
+
+prjPoints <- function(data){
+  output = dplyr::select(data, Long, Lat) %>%
+    relocate(Long, .before = Lat) %>%
+    as.matrix() %>%
+    st_multipoint() %>%
+    st_sfc(crs = 4326) %>%
+    st_transform(crs = target_crs) %>%
+    .[[1]] %>% 
+    as.matrix() %>%
+    as.data.frame() %>%
+    rename(prjy = 2, prjx = 1) %>%
+    cbind(data)
+  return(output)
+}
+```
+
+```{r, include=FALSE, fig.width=14, fig.height=12}
+zoom_to <- c(-115, 43.5)
+
+zoom_level <- 5.25
+
+C <- 40075016.686
+x_offset <- 0
+y_offset <- 150000
+
+
+x_span <- (C / 2^(zoom_level)) + x_offset
+y_span <- (C / 2^(zoom_level)) + y_offset
+
+target_crs <- sprintf('+proj=laea +lon_0=%f +lat_0=%f', zoom_to[1], zoom_to[2])
+zoom_to_xy <- st_transform(st_sfc(st_point(zoom_to), crs = 4326), crs = target_crs)
+
+disp_window <- st_sfc(st_point(st_coordinates(zoom_to_xy - c(x_span / 2, y_span / 2))),
+                      st_point(st_coordinates(zoom_to_xy + c(x_span / 2, y_span / 2))),
+                      crs = target_crs)
+elev_window <- st_sfc(st_point(st_coordinates(zoom_to_xy - c((x_span*1.08) / 2, (y_span*1.05) / 2))),
+                      st_point(st_coordinates(zoom_to_xy + c((x_span*1.08) / 2, (y_span*1.1) / 2))),
+                      crs = target_crs)
+
+countries <- ne_load(scale = 10, type = 'admin_0_countries', 
+                     destdir = mapDir, returnclass = 'sf') %>%
+  filter(GEOUNIT %in% cList) %>%
+  st_transform(crs = target_crs)
+
+bg_poly <- st_sfc(st_point(st_coordinates(zoom_to_xy - c((x_span*1.4) / 2, (y_span*1.4) / 2))),
+                  st_point(st_coordinates(zoom_to_xy + c((x_span*1.4) / 2, (y_span*1.4) / 2))),
+                  crs = target_crs) %>%
+  st_bbox() %>%
+  st_as_sfc()
+
+elev_rast <- get_elev_raster(locations = elev_window, z = 7, clip = 'tile') %>%
+  rast() %>%
+  mask(vect(st_transform(countries, crs = target_crs)))
+
+elev_df <- as.data.frame(elev_rast, xy = TRUE) %>%
+  rename(alt = 3)
+sl <- terrain(elev_rast, "slope", unit = "radians")
+asp <- terrain(elev_rast, "aspect", unit = "radians")
+hill_df <- shade(sl, asp, 
+      # angle = 45, 
+      angle = 30,
+      direction = 300,
+      normalize= TRUE) %>%
+  as.data.frame(xy = TRUE)
+
+elevLims <- minmax(elev_rast) %>%
+  as.integer() + c(450, -800)
+```
+
+```{r}
+pal <- hypso.colors(n = 256, palette = 'wiki-schwarzwald-cont')
+
+hcl <- hex2RGB(pal) %>%
+  as('polarLUV')
+
+hcl@coords[,'C'] <- hcl@coords[,'C'] * 0.95
+idx <- (hcl@coords[, "H"] <= 90 | hcl@coords[, "H"] >= 160) & hcl@coords[,'C'] > 1
+hcl@coords[idx, "C"] <- hcl@coords[idx, "C"] * 0.4
+
+cols_mod <- hex(polarLUV(L = hcl@coords[,'L'],
+                         C = hcl@coords[,'C'],
+                         H = hcl@coords[,'H']))
+```
+
+```{r}
+baseMap <- ggplot(countries) + 
+  geom_sf(data = bg_poly, fill = 'lightblue', alpha = 0.65) +
+  geom_raster(data = hill_df,
+              aes(x, y, fill = hillshade),
+              show.legend = FALSE,
+              # alpha = 0.8) +
+              alpha = 1) +
+  # scale_fill_distiller(palette = 'Greys') +
+  scale_fill_gradient2(low = 'gray10', mid = 'grey95', high = "white", midpoint = 180) +
+  new_scale_fill() +
+  geom_raster(data = elev_df,
+              aes(x, y, fill = alt),
+              # alpha = 0.33,
+              alpha = 0.3,
+              show.legend = FALSE) +
+  # scale_fill_hypso_c(palette = saturation('dem_poster', scalefac(0.5)),
+  #                    limits = elevLims) +
+  # scale_fill_continuous_sequential(palette = "Terrain",
+  #                                  limits = elevLims) +
+  scale_fill_gradientn(colours = cols_mod,
+                       limits = elevLims) +
+  geom_sf(data = rivers_major, color = "#0978AB", linewidth = 0.1) + 
+  # geom_sf_text(data = rivers_minor, aes(label = name)) +
+  geom_sf(data = rivers_minor, color = '#0978AB', linewidth = 0.1) +
+  geom_sf(data = lakes_major, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
+  geom_sf(data = lakes_minor, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
+  geom_sf(data = states, fill = NA, color = 'grey20', linewidth = 0.4) +
+  coord_sf(xlim = st_coordinates(disp_window)[,'X'],
+           ylim = st_coordinates(disp_window)[,'Y']) +
+  labs(x = 'Longitude',
+       y = 'Latitude') +
+  theme_bw() +
+  theme(panel.border = element_rect(linewidth = 1.5, color = 'black'),
+        legend.position = 'none',
+        axis.title.y.left = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = 2),
+        axis.title.x.bottom = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = -1),
+        axis.text = element_text(size = 14),
+        axis.ticks.length = unit(0.1, 'cm'),
+        panel.grid = element_blank(),
+        panel.background = element_rect(fill = 'white'),
+        # plot.margin = margin(t = 10, r = 30, b = 10, l = 10, unit = 'pt'),
+        plot.margin = margin(t = 2, r = 4, b = 15, l = 4, unit = 'pt'))
+
+# baseMap
+```
+
+
+```{r}
+phha_locs <- read.csv('PHHA_latlong.csv') %>%
+  rename(Pop = Two.letter.abbrev) %>%
+  prjPoints()
+```
+
+```{r, include=FALSE, fig.width=26, fig.height=20}
+col_pie <- c('#ba039b', '#ead624', '#154975', '#fe8f06', '#4ed31b', 
+             '#ffa5ca', '#78F5C1')
+
+makePopId <- function(fileIndv){
+  PopIDdf = read.table(fileIndv, sep="\t") %>%
+    as.data.frame() %>%
+    rename(ID = V1) %>%
+    mutate(Pop = str_split_i(ID, '_', 2))
+  return(PopIDdf)
+}
+
+PHHApop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012.indv')
+
+anck2_pie <- read.csv('../entropy/estpost_files/q2.txt') %>%
+  cbind(PHHApop) %>%
+  mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
+
+anck3_pie <- read.csv('../entropy/estpost_files/q3.txt') %>%
+  cbind(PHHApop) %>%
+  mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
+
+anck4_pie <- read.csv('../entropy/estpost_files/q4.txt') %>%
+  cbind(PHHApop) %>%
+  mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
+anck4_pie$ancGroup <- factor(recode(anck4_pie$ancGroup, '0' = '1', '1' = '0'))
+
+anck5_pie <- read.csv('../entropy/estpost_files/q5.txt') %>%
+  cbind(PHHApop) %>%
+  mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
+anck5_pie$ancGroup <- factor(recode(anck5_pie$ancGroup, '1' = '4', '2' = '3', '3' = '1', '4' = '2'))
+
+anck6_pie <- read.csv('../entropy/estpost_files/q6.txt') %>%
+  cbind(PHHApop) %>%
+  mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
+anck6_pie$ancGroup <- factor(recode(anck6_pie$ancGroup, '0' = '4', '1' = '3', '2' = '0', '3' = '2', '4' = '5', '5' = '1'))
+
+anck7_pie <- read.csv('../entropy/estpost_files/q7.txt') %>%
+  cbind(PHHApop) %>%
+  mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
+anck7_pie$ancGroup <- factor(recode(anck7_pie$ancGroup, '0' = '6', '1' = '4', '2' = '0', '4' = '5', '5' = '2', '6' = '1'))
+
+
+makePieMap <- function(anc_df, k, colors){
+  pie_df = anc_df %>%
+    group_by(Pop, ancGroup) %>%
+    summarise(popMean = mean(mean)) %>%
+    full_join(phha_locs, by = 'Pop') %>%
+    mutate(ancGroup = paste0('q', ancGroup)) %>%
+    pivot_wider(values_from = popMean, names_from = ancGroup)
+  k_cols = colnames(pie_df)[(ncol(pie_df) - k + 1):ncol(pie_df)]
+  pie_map = baseMap +
+    new_scale_fill() +
+    geom_scatterpie(data = pie_df,
+                    aes(x = prjx, y = prjy, group = Pop,
+                        r = 30000),
+                    cols = k_cols,
+                    linewidth = 0.5) +
+    scale_fill_manual(values = col_pie) +
+    annotate('label', x = 320000, y = -510000, 
+             label = paste0('K = ', as.character(k)),
+             size = 15,
+             color = 'black',
+             fill = 'white',
+             label.size = 1)
+  return(pie_map)
+}
+
+pie2map <- makePieMap(anck2_pie, 2, col_pie) +
+  theme(axis.title.x.bottom = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        axis.ticks.x = element_blank())
+pie3map <- makePieMap(anck3_pie, 3, col_pie) +
+  theme(axis.title.y.left = element_blank(),
+        axis.text.y.left = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.x.bottom = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        axis.ticks.x = element_blank())
+pie4map <- makePieMap(anck4_pie, 4, col_pie)  +
+  theme(axis.title.y.left = element_blank(),
+        axis.text.y.left = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.x.bottom = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        axis.ticks.x = element_blank())
+pie5map <- makePieMap(anck5_pie, 5, col_pie)
+pie6map <- makePieMap(anck6_pie, 6, col_pie) +
+  theme(axis.title.y.left = element_blank(),
+        axis.text.y.left = element_blank(),
+        axis.ticks.y = element_blank())
+pie7map <- makePieMap(anck7_pie, 7, col_pie) +
+  theme(axis.title.y.left = element_blank(),
+        axis.text.y.left = element_blank(),
+        axis.ticks.y = element_blank())
+
+pies_2to7 <- pie2map + pie3map + pie4map + pie5map + pie6map + pie7map + plot_layout(ncol = 3)
+
+ggsave('../images/pieMaps_2to7.png', pies_2to7, width = 26, height = 20, dpi = 400)
+```
+
+
