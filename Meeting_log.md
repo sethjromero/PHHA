@@ -52,7 +52,7 @@ Seth:
 - pull PRISM data, plot variables by latitude
 
 Ellen:
-- 
+- observed & expected heterozygosity
 
 Tom:
 - un-PC (https://onlinelibrary.wiley.com/doi/full/10.1111/1755-0998.12747)
