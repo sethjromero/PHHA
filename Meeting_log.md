@@ -43,5 +43,19 @@ Im putting a list of analyses/considerations here I think we might want to explo
 
 - Genetic diversity (He, Ho, theta), and how its arranged geographically
 
+## Week 3; 2/4/26
+
+Cameron:
+- pull climateNA data, plot variables by latitude
+
+Seth:
+- pull PRISM data, plot variables by latitude
+
+Ellen:
+- 
+
+Tom:
+- un-PC (https://onlinelibrary.wiley.com/doi/full/10.1111/1755-0998.12747)
+
 
 
