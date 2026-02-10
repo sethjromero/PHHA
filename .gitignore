@@ -1,3 +1,5 @@
 .DS_Store
 /entropy/hdf5_files
 entropy/.Rhistory
+.RData
+.Rhistory
