@@ -60,13 +60,13 @@ hobs_strict = summary(genind_strict)$Hobs
 # plot comparison between versions
 dens1 = density(hobs_round)
 dens2 = density(hobs_strict)
-png("het_analyses_etc/Ho.png")
+#png("het_analyses_etc/Ho.png")
 plot(dens1, type = "n", xlim = c(0,1), 
      ylim = range(c(dens1$y, dens2$y)), 
      main = "Observed heterozygosity", xlab = "Value", ylab = "Density")
 polygon(dens1, col = rgb(1, 0, 0, 0.5), border = "red")  # red with 50% transparency
 polygon(dens2, col = rgb(0, 0, 1, 0.5), border = "blue") # blue with 50% transparency
-dev.off()
+##dev.off()
 
 # expected het per locus (all individuals/pops)
 hexp_round = summary(genind_round)$Hexp
@@ -74,35 +74,35 @@ hexp_strict = summary(genind_strict)$Hexp
 # plot comparison between versions
 dens1 = density(hexp_round)
 dens2 = density(hexp_strict)
-png("het_analyses_etc/He.png")
+#png("het_analyses_etc/He.png")
 plot(dens1, type = "n", xlim = c(0,1), 
      ylim = range(c(dens1$y, dens2$y)), 
      main = "Expected heterozygosity", xlab = "Value", ylab = "Density")
 polygon(dens1, col = rgb(1, 0, 0, 0.5), border = "red")  # red with 50% transparency
 polygon(dens2, col = rgb(0, 0, 1, 0.5), border = "blue") # blue with 50% transparency
 # higher het than expected at some loci
-dev.off()
+#dev.off()
 
 # compare observed and expected for each version
 dens1 = density(hobs_round)
 dens2 = density(hexp_round)
-png("het_analyses_etc/Ho_He_round.png")
+#png("het_analyses_etc/Ho_He_round.png")
 plot(dens1, type = "n", xlim = c(0,1), 
      ylim = range(c(dens1$y, dens2$y)), 
      main = "Observed vs expected heterozygosity - round", xlab = "Value", ylab = "Density")
 polygon(dens1, col = rgb(1, 0, 0, 0.5), border = "red")  # red with 50% transparency
 polygon(dens2, col = rgb(0, 0, 1, 0.5), border = "blue") # blue with 50% transparency
-dev.off()
+#dev.off()
 # compare observed and expected for each version
 dens1 = density(hobs_strict)
 dens2 = density(hexp_strict)
-png("het_analyses_etc/Ho_He_strict.png")
+#png("het_analyses_etc/Ho_He_strict.png")
 plot(dens1, type = "n", xlim = c(0,1), 
      ylim = range(c(dens1$y, dens2$y)), 
      main = "Observed vs expected heterozygosity - strict", xlab = "Value", ylab = "Density")
 polygon(dens1, col = rgb(1, 0, 0, 0.5), border = "red")  # red with 50% transparency
 polygon(dens2, col = rgb(0, 0, 1, 0.5), border = "blue") # blue with 50% transparency
-dev.off()
+#dev.off()
 
 # convert to hierfstat format
 hfs_round = genind2hierfstat(genind_round)
@@ -141,14 +141,14 @@ write.csv(pairwise_fst_strict, "het_analyses_etc/pairwise_fst_strict.csv")
 print(bs_strict$overall[7])
 
 # plot comparison
-png("het_analyses_etc/fst_heatmap_round.png")
+#png("het_analyses_etc/fst_heatmap_round.png")
 pheatmap(pairwise_fst_round, clustering_distance_rows = "euclidean",
          clustering_distance_cols = "euclidean", main = "Pairwise FST", silent=FALSE)
-dev.off()
-png("het_analyses_etc/fst_heatmap_strict.png")
+#dev.off()
+#png("het_analyses_etc/fst_heatmap_strict.png")
 pheatmap(pairwise_fst_strict, clustering_distance_rows = "euclidean",
          clustering_distance_cols = "euclidean", main = "Pairwise FST", silent=FALSE)
-dev.off()
+#dev.off()
 
 # reorder to compare better to the entropy results
 pop_order = c("DA", "PM", "GB", "SL", "PR", "AS", "TB",
@@ -156,15 +156,15 @@ pop_order = c("DA", "PM", "GB", "SL", "PR", "AS", "TB",
               "WC", "PC", "FV", "SB", "BA", "MC", "SH", "FC",
               "WH","CA", "CR", "KC", "ML")
 pairwise_fst_strict_reordered = pairwise_fst_strict[pop_order, pop_order]
-png("het_analyses_etc/fst_heatmap_round.png")
+#png("het_analyses_etc/fst_heatmap_round.png")
 pheatmap(pairwise_fst_strict_reordered, clustering_distance_rows = "euclidean",
          clustering_distance_cols = "euclidean", main = "Pairwise FST", silent=FALSE)
-dev.off()
+#dev.off()
 pairwise_fst_round_reordered = pairwise_fst_round[pop_order, pop_order]
-png("het_analyses_etc/fst_heatmap_strict.png")
+#png("het_analyses_etc/fst_heatmap_strict.png")
 pheatmap(pairwise_fst_round_reordered, clustering_distance_rows = "euclidean",
          clustering_distance_cols = "euclidean", main = "Pairwise FST", silent=FALSE)
-dev.off()
+#dev.off()
 
 #### Nei's distanct ####
 # genetic vs geo distance
@@ -240,7 +240,7 @@ colors = ifelse(pairs_mat[,1] == "DA" | pairs_mat[,2] == "DA", "lightgreen",
                 ifelse(pairs_mat[,1] == "PM" | pairs_mat[,2] == "PM", "thistle", "black"))
 colors[pairs_mat[,1]=="DA" & pairs_mat[,2]=="PM"] = "deeppink"
 
-png("het_analyses_etc/mantel_round.png")
+#png("het_analyses_etc/mantel_round.png")
 plot(
   geo_vec, gen_vec_round,
   xlab = "Geographic distance",
@@ -253,7 +253,7 @@ abline(lm(gen_vec_round ~ geo_vec), lwd = 2)
 legend("topright",
        legend = paste0("Mantel r = ", round(mantel_res_round$statistic, 3),
                        "\nP = ", mantel_res_round$signif), bty = "n")
-dev.off()
+#dev.off()
 
 
 d = as.dist(gen_dist_strict)
@@ -266,7 +266,7 @@ colors = ifelse(pairs_mat[,1] == "DA" | pairs_mat[,2] == "DA", "lightgreen",
                 ifelse(pairs_mat[,1] == "PM" | pairs_mat[,2] == "PM", "thistle", "black"))
 colors[pairs_mat[,1]=="DA" & pairs_mat[,2]=="PM"] = "deeppink"
 
-png("het_analyses_etc/mantel_strict.png")
+#png("het_analyses_etc/mantel_strict.png")
 plot(
   geo_vec, gen_vec_strict,
   xlab = "Geographic distance",
@@ -279,10 +279,10 @@ abline(lm(gen_vec_strict ~ geo_vec), lwd = 2)
 legend("topright",
        legend = paste0("Mantel r = ", round(mantel_res_strict$statistic, 3),
                        "\nP = ", mantel_res_strict$signif), bty = "n")
-dev.off()
+#dev.off()
 
 
-png("het_analyses_etc/gen_dist_map_round.png")
+#png("het_analyses_etc/gen_dist_map_round.png")
 # plot map
 plot(NA,
      xlab = "Longitude",
@@ -322,9 +322,9 @@ text(
   pos = 3,
   cex = 1.5
 )
-dev.off()
+#dev.off()
 
-png("het_analyses_etc/gen_dist_map_strict.png")
+#png("het_analyses_etc/gen_dist_map_strict.png")
 # plot map
 plot(NA,
      xlab = "Longitude",
@@ -364,7 +364,7 @@ text(
   pos = 3,
   cex = 1.5
 )
-dev.off()
+#dev.off()
 
 #### maps of fst ####
 # do with fst instead of nei's dist
@@ -374,7 +374,7 @@ color_fun = colorRampPalette(c("blue", "red"))
 colors = color_fun(100)[as.numeric(cut(fst_scaled, breaks = 100))]
 colors_trans = adjustcolor(colors, alpha.f = 0.5)
 
-png("het_analyses_etc/fst_map_strict.png")
+#png("het_analyses_etc/fst_map_strict.png")
 plot(NA,
      xlab = "Longitude",
      ylab = "Latitude",
@@ -404,7 +404,7 @@ text(
   pos = 3,
   cex = 1.5
 )
-dev.off()
+#dev.off()
 
 # do with fst instead of nei's dist
 fst_vec_round = as.vector(pairwise_fst_round[upper.tri(pairwise_fst_round)])
@@ -413,7 +413,7 @@ color_fun = colorRampPalette(c("blue", "red"))
 colors = color_fun(100)[as.numeric(cut(fst_scaled, breaks = 100))]
 colors_trans = adjustcolor(colors, alpha.f = 0.5)
 
-png("het_analyses_etc/fst_map_round.png")
+#png("het_analyses_etc/fst_map_round.png")
 plot(NA,
      xlab = "Longitude",
      ylab = "Latitude",
@@ -443,7 +443,7 @@ text(
   pos = 3,
   cex = 1.5
 )
-dev.off()
+#dev.off()
 
 #### hwe ####
 hw_results = hw.test(genind_round, B = 0)
