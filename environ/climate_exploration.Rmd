@@ -1,0 +1,242 @@
+---
+title:  |
+  | **PHHA**
+  | <span style='font-size: 18pt'>*Climate data pulling & exploration*</span>
+output: 
+  html_document:
+    theme: cosmo
+    highlight: tango
+---
+
+```{r, echo=FALSE}
+library(knitr)
+opts_chunk$set(echo = F, message = F, warning = F, fig.width = 8, fig.height = 8, fig.align = 'center')
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(readr)
+library(ggplot2)
+library(ggrepel)
+library(MoMAColors)
+library(patchwork)
+library(colorspace)
+library(ggnewscale)
+library(tidyterra)
+library(rnaturalearth)
+library(elevatr)
+library(sf)
+library(terra)
+library(ClimateNAr)
+```
+
+```{r}
+phha_locs <- read.csv('PHHA_latlong.csv') %>%
+  rename(Pop = Two.letter.abbrev) %>%
+  filter(Pop != 'DA' & Pop != 'PM')
+```
+
+```{r}
+ll_prj <- 4326
+mts_sf <- st_as_sf(x = select(phha_locs, Pop, Lat, Long), coords = c('Long', 'Lat'), crs = ll_prj)
+elevA <- get_elev_point(locations = mts_sf, units = 'meters', src = 'epqs') %>%
+  st_drop_geometry()
+
+phha_climIn <- full_join(elevA, select(phha_locs, Pop, Lat, Long)) %>%
+  mutate(ID1 = Pop, 
+         ID2 = Pop) %>%
+  rename(lat = Lat,
+         lon = Long) %>%
+  select(ID1, ID2, lat, lon, elevation)
+
+ann_seas <- ClimateNAr(phha_climIn, 'Normal_1961_1990.nrm', 'YS', './map_layers/')
+
+monthly <- 
+
+# clims <- scale(test[,6:90])
+
+clims <- test[,6:90]
+
+zs <- apply(scale(clims), 2, var)
+
+min <- apply(clims, 2, min)
+max <- apply(clims, 2, max)
+
+range <- max - min
+
+max
+
+cv <- apply(test[,6:90], 2, sd, na.rm = TRUE) / abs(colMeans(test[,6:90], na.rm = TRUE))
+
+iqr <- apply(test[,6:90], 2, IQR)
+q05_95 <- apply(clims, 2, function(x) diff(quantile(x, probs = c(0.05, 0.95))))
+q10_90 <- apply(clims, 2, function(x) diff(quantile(x, probs = c(0.1, 0.9))))
+
+rel_iqr_2 <- (q10_90/(max-min))/0.8
+
+rel_iqr <- (iqr/q10_90)/(0.5/0.8)
+
+rel_iqr
+rel_iqr_2
+
+names(rel_iqr)
+
+iqr_df <- tibble(names(rel_iqr), seq(6, 90, 1), rel_iqr, rel_iqr_2) %>%
+  filter(rel_iqr > 0.1 & is.na(rel_iqr) == F) %>%
+  rename(cols = 2,
+         vars = 1)
+
+chosen <- as.vector(iqr_df$vars)
+
+test_filt <- cbind(test[,1:5], test[,..chosen])
+
+hist(iqr_df$rel_iqr)
+
+for_pca <- test_filt[,6:85]
+
+env_pca <- prcomp(for_pca, scale. = T, center = T)
+
+summary(env_pca)
+
+vars <- env_pca$rotation[,1:4]
+
+env_pca_loading <- env_pca$x
+
+pops_env <- cbind(phha_climIn[,1], env_pca_loading[,1:6]) %>%
+  as.data.frame() %>%
+  mutate(PC1 = as.numeric(PC1),
+         PC2 = as.numeric(PC2),
+         PC3 = as.numeric(PC3),
+         PC4 = as.numeric(PC4))
+```
+
+```{r, fig.width=40, fig.height=40}
+cormat <- round(cor(test_filt[,6:85]),2)
+melted_cormat <- reshape2::melt(cormat)
+
+# Get lower triangle of the correlation matrix
+get_lower_tri<-function(cormat){
+  cormat[upper.tri(cormat)] <- NA
+  return(cormat)
+}
+# Get upper triangle of the correlation matrix
+get_upper_tri <- function(cormat){
+  cormat[lower.tri(cormat)]<- NA
+  return(cormat)
+}
+
+upper_tri <- get_upper_tri(cormat)
+
+reorder_cormat <- function(cormat){
+  # Use correlation between variables as distance
+  dd <- as.dist((1-cormat)/2)
+  hc <- hclust(dd)
+  cormat <-cormat[hc$order, hc$order]
+}
+
+# Reorder the correlation matrix
+cormat <- reorder_cormat(cormat)
+upper_tri <- get_upper_tri(cormat)
+# Melt the correlation matrix
+melted_cormat <- reshape2::melt(upper_tri, na.rm = TRUE)
+# Create a ggheatmap
+ggheatmap <- ggplot(melted_cormat, aes(Var2, Var1, fill = value))+
+  geom_tile(color = "white")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal()+ # minimal theme
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 12, hjust = 1))+
+  coord_fixed() +
+  geom_text(aes(Var2, Var1, label = value), color = "black", size = 4) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    # panel.grid.major = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    axis.ticks = element_blank(),
+    legend.justification = c(1, 0),
+    legend.position = 'none',
+    legend.direction = "horizontal")
+  # guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+  #                              title.position = "top", title.hjust = 0.5))
+
+ggheatmap
+
+# ggsave('env_var_corr_heatMap.png', ggheatmap, height = 40, width = 40, dpi = 300)
+```
+
+```{r}
+prune_correlated <- function(R, cutoff = 0.9, verbose = TRUE) {
+  
+  removed <- character()
+  
+  repeat {
+    diag(R) <- NA
+    
+    # Count high correlations
+    high_counts <- colSums(abs(R) > cutoff, na.rm = TRUE)
+    
+    # Stop if none exceed cutoff
+    if (max(high_counts, na.rm = TRUE) == 0) break
+    
+    # Variable with most high correlations
+    top_var <- names(which.max(high_counts))
+    
+    # Variables to remove
+    to_remove <- names(which(abs(R[top_var, ]) > cutoff))
+    to_remove <- union(to_remove, top_var)
+    
+    if (verbose) {
+      message(
+        "Removing ", length(to_remove),
+        " variables due to: ", top_var
+      )
+    }
+    
+    removed <- c(removed, to_remove)
+    
+    # Subset matrix
+    R <- R[!rownames(R) %in% to_remove,
+           !colnames(R) %in% to_remove,
+           drop = FALSE]
+  }
+  
+  list(
+    pruned_matrix = R,
+    removed_variables = unique(removed)
+  )
+}
+
+result <- prune_correlated(cormat, cutoff = 0.95)
+
+pruned_vars <- result$pruned_matrix %>%
+  as.data.frame() %>%
+  colnames() %>%
+  as.vector
+
+test3 <- cbind(test[,1:5], test[,..pruned_vars])
+
+for_pca <- test3[,6:28]
+
+env_pca <- prcomp(for_pca, scale. = T, center = T)
+
+summary(env_pca)
+
+vars <- env_pca$rotation[,1:6]
+
+env_pca_loading <- env_pca$x
+
+pops_env <- cbind(phha_climIn[,1], env_pca_loading[,1:6]) %>%
+  as.data.frame() %>%
+  mutate(PC1 = as.numeric(PC1),
+         PC2 = as.numeric(PC2),
+         PC3 = as.numeric(PC3),
+         PC4 = as.numeric(PC4))
+
+vars
+```

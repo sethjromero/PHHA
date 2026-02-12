@@ -18,6 +18,8 @@
 All directories and paths in this markdown will be relative to:  
 `/working/romero/PHHA/`
 
+<span style="color:red">***NOTE:** `DA` and `PM` populations have been excluded as likely being some sister taxa or hybrids. Fastqs for those populations can be found under `./outlier_pops/`*</span>
+
 Starting in `./fastq`:
 
 ```sh
@@ -38,8 +40,8 @@ ls *.fastq.gz | cut -d'_' -f2 | sort -u | wc -l
 
 PHHA dataset:
 
-+ **256** individuals
-+ **26** populations
++ **239** individuals
++ **24** populations
 
 Checking distribution of fastq file sizes
 
@@ -71,9 +73,9 @@ END {
 >1GB         0
 500MB–1GB    0
 100MB-500MB  12
-10–100MB     238
+10–100MB     222
 1–10MB       4
-<1MB         2
+<1MB         1
 ```
 
 Quick look at high/low extreme individuals
@@ -100,6 +102,7 @@ ls -lhS | awk '{print $5, $9}' | tail
 ```
 
 ```
+38M PH_BC_8.fastq.gz
 34M PH_SL_7.fastq.gz
 34M PH_SH_10.fastq.gz
 25M PH_BC_12.fastq.gz
@@ -108,7 +111,6 @@ ls -lhS | awk '{print $5, $9}' | tail
 4.4M PH_PR_10.fastq.gz
 3.5M PH_BA_11.fastq.gz
 1.6M PH_BA_6.fastq.gz
-968K PH_PM_5.fastq.gz
 62K PH_WC_4.fastq.gz
 ```
 
@@ -177,16 +179,16 @@ Summarizing number of contigs for each assembly based on clustering match percen
 ```
 
 ```sh
-cluster_pct	    contig_count
-89	            763499
-90	            815035
-91	            878248
-92	            958586
-93	            1016270
-94	            1072715
-95	            1232428
-96	            1504062
-97	            1940870
+cluster_pct   contig_count
+89	          735065
+90	          784019
+91	          843770
+92	          919756
+93	          975189
+94	          1027177
+95	          1177888
+96	          1432508
+97	          1842126
 ```
 
 Continuing with the assembly based on **c = 0.94**

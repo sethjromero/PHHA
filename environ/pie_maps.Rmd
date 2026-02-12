@@ -99,7 +99,7 @@ bg_poly <- st_sfc(st_point(st_coordinates(zoom_to_xy - c((x_span*1.4) / 2, (y_sp
   st_bbox() %>%
   st_as_sfc()
 
-elev_rast <- get_elev_raster(locations = elev_window, z = 7, clip = 'tile') %>%
+elev_rast <- get_elev_raster(locations = elev_window, z = 6, clip = 'tile') %>%
   rast() %>%
   mask(vect(st_transform(countries, crs = target_crs)))
 
@@ -115,7 +115,8 @@ hill_df <- shade(sl, asp,
   as.data.frame(xy = TRUE)
 
 elevLims <- minmax(elev_rast) %>%
-  as.integer() + c(450, -800)
+  # as.integer() + c(450, -800)
+  as.integer() + c(250, -900)
 ```
 
 ```{r}
@@ -139,9 +140,7 @@ baseMap <- ggplot(countries) +
   geom_raster(data = hill_df,
               aes(x, y, fill = hillshade),
               show.legend = FALSE,
-              # alpha = 0.8) +
               alpha = 1) +
-  # scale_fill_distiller(palette = 'Greys') +
   scale_fill_gradient2(low = 'gray10', mid = 'grey95', high = "white", midpoint = 180) +
   new_scale_fill() +
   geom_raster(data = elev_df,
@@ -149,14 +148,9 @@ baseMap <- ggplot(countries) +
               # alpha = 0.33,
               alpha = 0.3,
               show.legend = FALSE) +
-  # scale_fill_hypso_c(palette = saturation('dem_poster', scalefac(0.5)),
-  #                    limits = elevLims) +
-  # scale_fill_continuous_sequential(palette = "Terrain",
-  #                                  limits = elevLims) +
   scale_fill_gradientn(colours = cols_mod,
                        limits = elevLims) +
   geom_sf(data = rivers_major, color = "#0978AB", linewidth = 0.1) + 
-  # geom_sf_text(data = rivers_minor, aes(label = name)) +
   geom_sf(data = rivers_minor, color = '#0978AB', linewidth = 0.1) +
   geom_sf(data = lakes_major, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
   geom_sf(data = lakes_minor, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
@@ -181,7 +175,7 @@ baseMap <- ggplot(countries) +
         # plot.margin = margin(t = 10, r = 30, b = 10, l = 10, unit = 'pt'),
         plot.margin = margin(t = 2, r = 4, b = 15, l = 4, unit = 'pt'))
 
-# baseMap
+baseMap
 ```
 
 
@@ -289,7 +283,6 @@ pie7map <- makePieMap(anck7_pie, 7, col_pie) +
 
 pies_2to7 <- pie2map + pie3map + pie4map + pie5map + pie6map + pie7map + plot_layout(ncol = 3)
 
-ggsave('../images/pieMaps_2to7.png', pies_2to7, width = 26, height = 20, dpi = 400)
+# ggsave('../images/pieMaps_2to7.png', pies_2to7, width = 26, height = 20, dpi = 400)
 ```
-
 
