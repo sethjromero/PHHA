@@ -138,24 +138,16 @@ baseMap <- ggplot(countries) +
   geom_raster(data = hill_df,
               aes(x, y, fill = hillshade),
               show.legend = FALSE,
-              # alpha = 0.8) +
               alpha = 1) +
-  # scale_fill_distiller(palette = 'Greys') +
   scale_fill_gradient2(low = 'gray10', mid = 'grey95', high = "white", midpoint = 180) +
   new_scale_fill() +
   geom_raster(data = elev_df,
               aes(x, y, fill = alt),
-              # alpha = 0.33,
               alpha = 0.3,
               show.legend = FALSE) +
-  # scale_fill_hypso_c(palette = saturation('dem_poster', scalefac(0.5)),
-  #                    limits = elevLims) +
-  # scale_fill_continuous_sequential(palette = "Terrain",
-  #                                  limits = elevLims) +
   scale_fill_gradientn(colours = cols_mod,
                        limits = elevLims) +
   geom_sf(data = rivers_major, color = "#0978AB", linewidth = 0.1) + 
-  # geom_sf_text(data = rivers_minor, aes(label = name)) +
   geom_sf(data = rivers_minor, color = '#0978AB', linewidth = 0.1) +
   geom_sf(data = lakes_major, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
   geom_sf(data = lakes_minor, color = '#0978AB', fill = 'lightblue', linewidth = 0.1) +
@@ -186,23 +178,23 @@ baseMap <- ggplot(countries) +
 ```{r}
 phha <- read.csv('PHHA_latlong.csv') %>%
   rename(Pop = Two.letter.abbrev) %>%
+  filter(Pop != 'DA' & Pop != 'PM') %>%
   prjPoints()
 ```
 
 
 ```{r, include=FALSE, fig.width=9.2, fig.height=10}
-col26 <- c("#a1def0", "#b32728", "#4ed31b", "#bf209e", "#3f862d", 
-           "#b32df9", "#99d683", "#74398b", "#ead624", "#4853fc", 
-           "#fe8f06", "#395f97", "#1cf1a3", "#ed8bc7", "#7c440e", 
-           "#c6c0fe", "#444a1e", "#efbba2", "#369094", "#fa756b",
-           "#88e99a", "#256b33", "#6dc5dd", "#154975", "#628df2",
-           "#874fbf")
+col24 <- c("#6c2733", "#905f33", "#7b39d5", "#bce333", "#cd4cc3",
+           "#49571A", "#74398b", "#D49202", "#0051FF", "#1cf1a3",
+           "#7ccfd2", "#d04675", "#154975", "#6690bd", "#4ed31b",
+           "#d1b3d8", "#77d898", "#fa756b", "#cccc9c", "#FCB61E",
+           "#cb8985", "#FFE508", "#e72525", "#0A7D22")
 
 
 phhaMap <- baseMap +
   new_scale_fill() +
-  scale_fill_manual(values = col26) +
-  scale_color_manual(values = darken(col26, 0.3)) +
+  scale_fill_manual(values = col24) +
+  scale_color_manual(values = darken(col24, 0.3)) +
   geom_label_repel(data = phha, 
                    aes(x = prjx, y = prjy, label = Pop, fill = Pop, color = Pop),
                    fontface = "bold", size = 6.5, box.padding = 0.75,
@@ -224,7 +216,7 @@ phhaMap <- baseMap +
              fill = 'white', 
              pch = 21)
 
-phhaMap
+# phhaMap
 
 ggsave('../images/sample_map.png', phhaMap, width = 9.2, height = 10, dpi = 400)
 ```

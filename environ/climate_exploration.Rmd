@@ -30,6 +30,7 @@ library(elevatr)
 library(sf)
 library(terra)
 library(ClimateNAr)
+library(dismo)
 ```
 
 ```{r}
@@ -53,10 +54,33 @@ phha_climIn <- full_join(elevA, select(phha_locs, Pop, Lat, Long)) %>%
 
 ann_seas <- ClimateNAr(phha_climIn, 'Normal_1961_1990.nrm', 'YS', './map_layers/')
 
-monthly <- 
+monthly <- ClimateNAr(phha_climIn, 'Normal_1961_1990.nrm', 'M', './map_layers/')
+```
 
-# clims <- scale(test[,6:90])
 
+```{r}
+bioNames <- c('T_AnnMean', 'T_DiurnRng', 'T_Isotherm', 'T_seasonal', 'Tmax_WrmM',
+              'Tmin_CM', 'T_AnnRng', 'Tmean_WtQ', 'Tmean_DQ', 'Tmean_WrmQ',
+              'Tmean_CQ', 'Ppt_Ann', 'Ppt_WtM', 'Ppt_DM', 'Ppt_seasonal',
+              'Ppt_WtQ', 'Ppt_DQ', 'Ppt_WrmQ', 'Ppt_CQ')
+
+ppt_index <- which(colnames(monthly) == 'PPT01')
+tmin_index <- which(colnames(monthly) == 'Tmin01')
+tmax_index <- which(colnames(monthly) == 'Tmax01')
+
+mxPrec <- monthly[,ppt_index:(ppt_index+11)] %>%
+  as.matrix()
+mxTmin <- monthly[,tmin_index:(tmin_index+11)] %>%
+  as.matrix()
+mxTmax <- monthly[,tmax_index:(tmax_index+11)] %>%
+  as.matrix()  
+
+biosBasic <- biovars(mxPrec, mxTmin, mxTmax)
+colnames(biosBasic) <- bioNames
+```
+
+
+```{r}
 clims <- test[,6:90]
 
 zs <- apply(scale(clims), 2, var)
