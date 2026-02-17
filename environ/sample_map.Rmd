@@ -65,7 +65,7 @@ prjPoints <- function(data){
 ```
 
 ```{r, include=FALSE, fig.width=14, fig.height=12}
-zoom_to <- c(-115, 43.5)
+zoom_to <- c(-115, 43.8)
 
 zoom_level <- 5.25
 
@@ -114,7 +114,8 @@ hill_df <- shade(sl, asp,
   as.data.frame(xy = TRUE)
 
 elevLims <- minmax(elev_rast) %>%
-  as.integer() + c(450, -800)
+  # as.integer() + c(450, -800)
+  as.integer() + c(800, -1000)
 ```
 
 ```{r}
