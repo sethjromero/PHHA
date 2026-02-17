@@ -62,19 +62,16 @@ vcftools \
 
 Produces file called **PHHA.bithin.q30.imiss**
   
-**256 of 256 individuals**
+**239 of 239 individuals**
 
-**669,819 SNPs**
+**645,604 SNPs**
 
 ```{r, fig.width=6, fig.height=5}
-col37 <- c("#a1def0", "#b32728", "#4ed31b", "#bf209e", "#3f862d", 
-           "#b32df9", "#99d683", "#74398b", "#ead624", "#4853fc", 
-           "#fe8f06", "#395f97", "#1cf1a3", "#ed8bc7", "#7c440e", 
-           "#c6c0fe", "#444a1e", "#efbba2", "#369094", "#fa756b",
-           "#88e99a", "#256b33", "#6dc5dd", "#154975", "#628df2",
-           "#874fbf", "#e84fe1", "#eec8f1", "#752e4f", "#c7799a",
-           "#2a2bf0", "#aebf8a", "#743502", "#bce333", "#e72525",
-           "#fea53b", "#ce1365")
+col24 <- c("#6c2733", "#905f33", "#7b39d5", "#bce333", "#cd4cc3",
+           "#49571A", "#74398b", "#D49202", "#0051FF", "#1cf1a3",
+           "#7ccfd2", "#d04675", "#154975", "#6690bd", "#4ed31b",
+           "#d1b3d8", "#77d898", "#fa756b", "#cccc9c", "#FCB61E",
+           "#cb8985", "#FFE508", "#e72525", "#0A7D22")
 
 ind_miss  <- read_delim("../filtering/PHHA.bithin.q30.imiss", 
                         delim = "\t",
@@ -86,8 +83,8 @@ imissFig1 <- ggplot(ind_miss,
                    aes(x = fmiss, y = Pop, fill = Pop, color = Pop)) +
   geom_jitter(pch = 21, size = 2,
               position = position_jitter(height = 0.2)) +
-  scale_fill_manual(values = col37) +
-  scale_color_manual(values = darken(col37, 0.3)) +
+  scale_fill_manual(values = col24) +
+  scale_color_manual(values = darken(col24, 0.3)) +
   scale_x_continuous(limits = c(0.63, 1)) +
   theme_bw() +
   theme(legend.position = 'none')
@@ -95,12 +92,12 @@ imissFig1 <- ggplot(ind_miss,
 imissFig1
 ```
 
-Just looking for some natural breaks here. Wanting to remove individuals that look like obvious outliers without drastically cutting certain populations or lowering within-population sampling. **0.88** looks like a decent threshold. If we wanted to be more aggressive, another option would be **0.85** (would remove another 11 individuals). Probably can't go much lower without losing `DA` and `CA` populations entirely.
+Just looking for some natural breaks here. Wanting to remove individuals that look like obvious outliers without drastically cutting certain populations or lowering within-population sampling.
 
-Below showing individual totals for each population based on **0.88** threshold.
+Below showing individual totals for each population based on **0.85** threshold.
 
 ```{r, fig.width=6, fig.height=5}
-pop_sum <- filter(ind_miss, fmiss < 0.88) %>%
+pop_sum <- filter(ind_miss, fmiss < 0.85) %>%
   group_by(Pop) %>%
   summarize(n = n())
 
@@ -108,15 +105,15 @@ imissFig2 <- ggplot(ind_miss,
                    aes(x = fmiss, y = Pop, fill = Pop, color = Pop)) +
   geom_jitter(pch = 21, size = 2,
               position = position_jitter(height = 0.2),
-              alpha = ifelse(ind_miss$fmiss > 0.88, 0.25, 1)) +
-  geom_vline(xintercept = 0.88, color = 'red',
+              alpha = ifelse(ind_miss$fmiss > 0.85, 0.25, 1)) +
+  geom_vline(xintercept = 0.85, color = 'red',
              linetype = 'dashed', linewidth = 0.5) +
   geom_text(data = pop_sum, aes(y = Pop, label = n),
             x = 0.64,
             size = 4,
             fontface = 'bold') +
-  scale_fill_manual(values = col37) +
-  scale_color_manual(values = darken(col37, 0.3)) +
+  scale_fill_manual(values = col24) +
+  scale_color_manual(values = darken(col24, 0.3)) +
   scale_x_continuous(limits = c(0.63, 1)) +
   theme_bw() +
   theme(legend.position = 'none')
@@ -124,21 +121,60 @@ imissFig2 <- ggplot(ind_miss,
 imissFig2
 ```
 
-Individual depth (averaged across all loci). Filtered out individuals >88% missigness as identified above.
+Removing the selected individuals via:
 
-**245 of 256 individuals**
+```{bash, echo=TRUE, eval=FALSE}
+awk '$5 > 0.85 {print $1}' PHHA.bithin.q30.imiss | tail -n +2 > indmiss85.txt
+```
 
-**669,819 SNPs**
+Now filtering out those identified individuals and making a downsized VCF.
 
-```{r, fig.width=10, fig.height=4}
-var_depth <- read_delim("../filtering/PHHA.bithin.q30.i88.ldepth.mean", delim = "\t",
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.recode.vcf \
+--remove indmiss85.txt \
+--remove-filtered-all \
+--recode \
+--recode-INFO-all \
+--out PHHA.bithin.q30.i85
+```
+
+Next taking a look at depth, particularly to set a maximum loci depth. Need to get two different output files.
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.i85.recode.vcf \
+--site-mean-depth \
+--out PHHA.bithin.q30.i85
+```
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.i85.recode.vcf \
+--freq2 \
+--out PHHA.bithin.q30.i85
+```
+
+Produces files called **PHHA.bithin.q30.i85.ldepth.mean** and **PHHA.bithin.q30.i85.frq**
+
+Individual depth (averaged across all loci). Filtered out individuals >85% missigness as identified above. Calculating an *adjusted depth* that is corrected for the rate at which loci are missing in certain individuals.
+
+**222 of 239 individuals**
+
+**645,604 SNPs**
+
+```{r, fig.width=10, fig.height=4, echo = TRUE}
+var_depth <- read_delim("../filtering/PHHA.bithin.q30.i85.ldepth.mean", delim = "\t",
            col_names = c("chr", "pos", "mean_depth", "var_depth"), skip = 1)
 
-a_freq <- read_delim("../filtering/PHHA.bithin.q30.i88.frq", delim = "\t",
+a_freq <- read_delim("../filtering/PHHA.bithin.q30.i85.frq", delim = "\t",
                      col_names = c("chr", "pos", "nalleles", "nchr", "a1", "a2"), skip = 1) %>%
   mutate(fmiss = (max(nchr)-nchr)/max(nchr))
 
 full_depth <- full_join(var_depth, a_freq, by = c("chr", "pos")) %>%
+  # re-calculating depth to adjust for missingness
+  # this represents mean depth only across individuals for which there is data
+  # makes depth more directly comparable, decouples from coverage across individuals
   mutate(depth_adj = mean_depth*(1/(1-fmiss)))
 
 colors <- moma.colors('OKeeffe', type = 'continuous', n = 200)
@@ -163,12 +199,32 @@ var_adj <- ggplot(full_depth, aes(x = fmiss, y = depth_adj)) +
 adpth_all + var_adj
 ```
 
+Going to extract loci below mean depth (adjusted) of **12**. Doing manually and creating a file of sites to filter for (include) in `vcftools`.
+
 ```{r, eval=FALSE, echo=TRUE}
 snp_set <- filter(full_depth, depth_adj < 12) %>%
   select(chr, pos)
 
 write_delim(snp_set, '../filtering/sites_maxdp12.tsv', delim = '\t', col_names = F)
 ```
+
+Creating another downsized VCF with only those sites.
+
+**222 individuals**
+
+**633,261 SNPs**
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.i85.recode.vcf \
+--positions sites_maxdp12.tsv \
+--remove-filtered-all \
+--recode \
+--recode-INFO-all \
+--out PHHA.bithin.q30.i85.maxdp12
+```
+
+Next looking at SNP retention across parameters of **allelic missingness** and **MAF**. This figure shows how many SNPs would pass filtering based on combinations of these two parameters.
 
 ```{r, fig.height=6, fig.width=8}
 var_freq <- filter(full_depth, depth_adj < 12)
@@ -213,6 +269,20 @@ param_compare <- ggplot(comb, aes(x = V1, y = snps, group = fmiss, label = fmiss
         legend.position = 'none')
 
 param_compare
+```
+
+Based on this, going to look at initial PCAs for missingness values of **30** and **20** (i.e. loci retained if they are present in more than 70/80% of individuals) and across the range of **0.01-0.05** MAF. Expecting to be in the range of ~ 3k-16k SNPs for final dataset.
+
+Example of code to create 012 files (will do this for all 10 parameter combinations).
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.i85.maxdp12.recode.vcf \
+--max-missing 0.7 \
+--maf 0.01
+--remove-filtered-all \
+--012 \
+--out PHHA.bithin.q30.i85.maxdp12.a70.maf01
 ```
 
 ```{r}
@@ -354,9 +424,11 @@ fwStd <- function(file012, popID, xAxis, yAxis, colorSet, grouping){
           plot.margin = margin(t = 5, r = 5, b = 5, l = 5, unit = 'pt'))
   return(pca_fw)
 }
+
+theme_border <- theme(plot.background = element_rect(fill = NA, color = 'forestgreen', size = 10))
 ```
 
-## Allelic missingness <30% (allele in minimum 172 of 245)
+## Allelic missingness <30% (allele in minimum 156 of 222)
 
 <style>
   hr.thick {
@@ -370,13 +442,13 @@ fwStd <- function(file012, popID, xAxis, yAxis, colorSet, grouping){
 
 #### **MAF = 0.01** (minor allele in >= 3 individuals)
 
-#### **15,009 SNPs**
+#### **16,901 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Apop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012.indv')
-Apca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012', Apop, col37, 'Pop')
-Afw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012', Apop, 'PC1', 'PC2', col37, 'Pop')
-Afw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf01.012', Apop, 'PC3', 'PC4', col37, 'Pop')
+Apop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf01.012.indv')
+Apca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf01.012', Apop, col24, 'Pop')
+Afw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf01.012', Apop, 'PC1', 'PC2', col24, 'Pop')
+Afw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf01.012', Apop, 'PC3', 'PC4', col24, 'Pop')
 
 A5 <- Apca + Afw + Afw2
 A5
@@ -386,13 +458,13 @@ A5
 
 #### **MAF = 0.02** (minor allele in >= 5 individuals)
 
-#### **8,993 SNPs**
+#### **10,370 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Gpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012.indv')
-Gpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012', Gpop, col37, 'Pop')
-Gfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012', Gpop, 'PC1', 'PC2', col37, 'Pop')
-Gfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf02.012', Gpop, 'PC3', 'PC4', col37, 'Pop')
+Gpop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf02.012.indv')
+Gpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf02.012', Gpop, col24, 'Pop')
+Gfw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf02.012', Gpop, 'PC1', 'PC2', col24, 'Pop')
+Gfw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf02.012', Gpop, 'PC3', 'PC4', col24, 'Pop')
 
 G5 <- Gpca + Gfw + Gfw2
 G5
@@ -400,31 +472,32 @@ G5
 
 <hr class="thick">
 
-#### **MAF = 0.03** (minor allele in >= 8 individuals)
+#### **MAF = 0.03** (minor allele in >= 7 individuals)
 
-#### **6,811 SNPs**
+#### **7,760 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Bpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012.indv')
-Bpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012', Bpop, col37, 'Pop')
-Bfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012', Bpop, 'PC1', 'PC2', col37, 'Pop')
-Bfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012', Bpop, 'PC3', 'PC4', col37, 'Pop')
+Bpop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf03.012.indv')
+Bpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf03.012', Bpop, col24, 'Pop')
+Bfw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf03.012', Bpop, 'PC1', 'PC2', col24, 'Pop')
+Bfw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf03.012', Bpop, 'PC3', 'PC4', col24, 'Pop')
 
 B5 <- Bpca + Bfw + Bfw2
-B5
+
+wrap_elements(full = B5 + plot_annotation(theme = theme_border))
 ```
 
 <hr class="thick">
 
-#### **MAF = 0.04** (minor allele in >= 8 individuals)
+#### **MAF = 0.04** (minor allele in >= 9 individuals)
 
-#### **5,617 SNPs**
+#### **6,358 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Hpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012.indv')
-Hpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012', Hpop, col37, 'Pop')
-Hfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012', Hpop, 'PC1', 'PC2', col37, 'Pop')
-Hfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf04.012', Hpop, 'PC3', 'PC4', col37, 'Pop')
+Hpop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf04.012.indv')
+Hpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf04.012', Hpop, col24, 'Pop')
+Hfw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf04.012', Hpop, 'PC1', 'PC2', col24, 'Pop')
+Hfw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf04.012', Hpop, 'PC3', 'PC4', col24, 'Pop')
 
 H5 <- Hpca + Hfw + Hfw2
 H5
@@ -432,37 +505,21 @@ H5
 
 <hr class="thick">
 
-#### **MAF = 0.05** (minor allele in >= 13 individuals)
+#### **MAF = 0.05** (minor allele in >= 12 individuals)
 
-#### **4,843 SNPs**
+#### **5,460 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Cpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012.indv')
-Cpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012', Cpop, col37, 'Pop')
-Cfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012', Cpop, 'PC1', 'PC2', col37, 'Pop')
-Cfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf05.012', Cpop, 'PC3', 'PC4', col37, 'Pop')
+Cpop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf05.012.indv')
+Cpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf05.012', Cpop, col24, 'Pop')
+Cfw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf05.012', Cpop, 'PC1', 'PC2', col24, 'Pop')
+Cfw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf05.012', Cpop, 'PC3', 'PC4', col24, 'Pop')
 
 C5 <- Cpca + Cfw + Cfw2
 C5
 ```
 
-<hr class="thick">
-
-#### **MAF = 0.06** (minor allele in >= 13 individuals)
-
-#### **4,276 SNPs**
-
-```{r, fig.width=10, fig.height=8}
-Ipop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012.indv')
-Ipca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012', Ipop, col37, 'Pop')
-Ifw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012', Ipop, 'PC1', 'PC2', col37, 'Pop')
-Ifw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf06.012', Ipop, 'PC3', 'PC4', col37, 'Pop')
-
-I5 <- Ipca + Ifw + Ifw2
-I5
-```
-
-```{r, fig.width=5, fig.height=5}
+```{r, fig.width=5, fig.height=5, eval=FALSE}
 snp_var_ratios <- tibble(maf = seq(0.01, 0.06, 0.01),
                          snps = c(15009, 8993, 6811, 5617, 4843, 4276),
                          pc1 = c(0.027, 0.037, 0.043, 0.048, 0.052, 0.054),
@@ -494,7 +551,7 @@ by1
 ```
 
 
-## Allelic missingness <20% (allele in minimum 196 of 245)
+## Allelic missingness <20% (allele in minimum 178 of 222)
 
 <style>
   hr.thick {
@@ -508,13 +565,13 @@ by1
 
 #### **MAF = 0.01** (minor allele in >= 3 individuals)
 
-#### **8,488 SNPs**
+#### **10,053 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Dpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012.indv')
-Dpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012', Dpop, col37, 'Pop')
-Dfw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012', Dpop, 'PC1', 'PC2', col37, 'Pop')
-Dfw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf01.012', Dpop, 'PC3', 'PC4', col37, 'Pop')
+Dpop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf01.012.indv')
+Dpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf01.012', Dpop, col24, 'Pop')
+Dfw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf01.012', Dpop, 'PC1', 'PC2', col24, 'Pop')
+Dfw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf01.012', Dpop, 'PC3', 'PC4', col24, 'Pop')
 
 D5 <- Dpca + Dfw + Dfw2
 D5
@@ -522,15 +579,15 @@ D5
 
 <hr class="thick">
 
-#### **MAF = 0.03** (minor allele in >= 8 individuals)
+#### **MAF = 0.03** (minor allele in >= 7 individuals)
 
-#### **4,030 SNPs**
+#### **4,660 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Epop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012.indv')
-Epca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012', Epop, col37, 'Pop')
-Efw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012', Epop, 'PC1', 'PC2', col37, 'Pop')
-Efw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf03.012', Epop, 'PC3', 'PC4', col37, 'Pop')
+Epop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf03.012.indv')
+Epca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf03.012', Epop, col24, 'Pop')
+Efw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf03.012', Epop, 'PC1', 'PC2', col24, 'Pop')
+Efw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf03.012', Epop, 'PC3', 'PC4', col24, 'Pop')
 
 E5 <- Epca + Efw + Efw2
 E5
@@ -538,17 +595,127 @@ E5
 
 <hr class="thick">
 
-#### **MAF = 0.05** (minor allele in >= 13 individuals)
+#### **MAF = 0.05** (minor allele in >= 12 individuals)
 
-#### **2,900 SNPs**
+#### **3,307 SNPs**
 
 ```{r, fig.width=10, fig.height=8}
-Fpop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012.indv')
-Fpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012', Fpop, col37, 'Pop')
-Ffw <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012', Fpop, 'PC1', 'PC2', col37, 'Pop')
-Ffw2 <- fwStd('../filtering/PHHA.bithin.q30.i88.maxdp12.a80.maf05.012', Fpop, 'PC3', 'PC4', col37, 'Pop')
+Fpop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf05.012.indv')
+Fpca <- pca1234FUN('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf05.012', Fpop, col24, 'Pop')
+Ffw <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf05.012', Fpop, 'PC1', 'PC2', col24, 'Pop')
+Ffw2 <- fwStd('../filtering/PHHA.bithin.q30.i85.maxdp12.a80.maf05.012', Fpop, 'PC3', 'PC4', col24, 'Pop')
 
 F5 <- Fpca + Ffw + Ffw2
 F5
 ```
 
+```{r}
+makeDepthMissFig <- function(miss_file, depth_file, color_set){
+  ind_miss = read_delim(miss_file,
+                        delim = "\t",
+                        col_names = c("ind", "ndata", "nfiltered", "nmiss", "fmiss"), 
+                        skip = 1,
+                        show_col_types = F) %>%
+    mutate(Pop = str_split_i(ind, '_', 2))
+  ind_depth = read_delim(depth_file, 
+                         delim = "\t",
+                         col_names = c("ind", "nsites", "depth"), 
+                         skip = 1,
+                         show_col_types = F) %>%
+    mutate(Pop = str_split_i(ind, '_', 2))
+  ind_comb = full_join(ind_miss, ind_depth, by = c('ind', 'Pop'))
+  imissFig = ggplot(ind_miss, aes(x = fmiss, y = Pop, fill = Pop, color = Pop)) +
+    geom_jitter(pch = 21, size = 0.5,
+                position = position_jitter(height = 0.2)) +
+    geom_boxplot(alpha = 0.25, outliers = F, coef = Inf,
+                 linewidth = 0.25, width = 0.5) +
+    scale_fill_manual(values = color_set) +
+    scale_color_manual(values = darken(color_set, 0.3)) +
+    theme_bw() +
+    theme(legend.position = 'none')
+  idepthFig = ggplot(ind_depth, aes(x = depth, y = Pop, fill = Pop, color = Pop)) +
+    geom_jitter(pch = 21, size = 0.5,
+                position = position_jitter(height = 0.2)) +
+    geom_boxplot(alpha = 0.25, outliers = F, coef = Inf,
+                 linewidth = 0.25, width = 0.5) +
+    scale_fill_manual(values = color_set) +
+    scale_color_manual(values = darken(color_set, 0.3)) +
+    theme_bw() +
+    theme(legend.position = 'none',
+          axis.title.y = element_blank())
+  missDepCorr = ggplot(ind_comb, aes(x = fmiss, y = depth)) +
+    geom_point(aes(color = Pop, fill = Pop),
+               pch = 21, size = 2) +
+    scale_fill_manual(values = color_set) +
+    scale_color_manual(values = darken(color_set, 0.3)) +
+    geom_smooth(method = "lm", formula = y ~ poly(x, 2),
+                color = 'black') +
+    theme_bw() +
+    theme(legend.position = 'none')
+  finalFig = imissFig + idepthFig + missDepCorr + plot_layout(nrow = 1, widths = c(2.3, 2.3, 5.4))
+  return(finalFig)
+}
+```
+
+Just want to do some final checks that the filtered sets of SNPs don't have any weird patterns with coverage or missing data across populations. Need to pull out individual depth and missingness data via:
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.i85.maxdp12.recode.vcf \
+--max-missing 0.7 \
+--maf 0.01
+--remove-filtered-all \
+--missing-indv \
+--out PHHA.bithin.q30.i85.maxdp12.a70.maf01
+```
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.i85.maxdp12.recode.vcf \
+--max-missing 0.7 \
+--maf 0.01
+--remove-filtered-all \
+--depth \
+--out PHHA.bithin.q30.i85.maxdp12.a70.maf01
+```
+
+Above produces files with the suffixes `.imiss` and `.idepth`. Going to look at this across a few different MAF thresholds (0.01, 0.03, 0.05) just to make sure nothing changes.
+
+#### **MAF = 0.01**
+
+```{r, fig.height=5, fig.width=10}
+makeDepthMissFig("../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf01.imiss",
+                 "../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf01.idepth",
+                 col24)
+```
+
+#### **MAF = 0.03**
+
+```{r, fig.height=5, fig.width=10}
+test <- makeDepthMissFig("../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf03.imiss",
+                 "../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf03.idepth",
+                 col24)
+
+wrap_elements(full = test + plot_annotation(theme = theme_border))
+```
+
+#### **MAF = 0.05**
+
+```{r, fig.height=5, fig.width=10}
+makeDepthMissFig("../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf05.imiss",
+                 "../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf05.idepth",
+                 col24)
+```
+
+No major changes. Creating a final VCF for entropy via:
+
+```{bash, echo=TRUE, eval=FALSE}
+vcftools \
+--vcf PHHA.bithin.q30.i85.maxdp12.recode.vcf \
+--max-missing 0.7 \
+--maf 0.03
+--remove-filtered-all \
+--recode \
+--recode-INFO-all \
+--out PHHA.bithin.q30.i85.maxdp12.a70.maf03
+```
