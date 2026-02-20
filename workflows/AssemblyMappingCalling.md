@@ -139,7 +139,77 @@ nohup parallel --no-notice -j 8 "zcat {}.fastq | mawk '$AWK1' | mawk '$AWK2' | p
 
 ### 1c. Clustering contigs for reference assembly
 
-Using the script `generateAssembly.sh` to automate this
+Using the script `generateAssembly.sh` to automate this. Contents of that script:
+
+```sh
+#!/bin/bash
+set -euo pipefail
+
+# Defaults
+
+THREADS=8
+
+# Parse arguments
+
+while getopts ":k:i:t:o:c:" opt; do
+  case "$opt" in
+    k) KVAL="$OPTARG" ;;
+    i) IVAL="$OPTARG" ;;
+    t) THREADS="$OPTARG" ;;
+    o) OUTFA="$OPTARG" ;;
+    c) CLUSTER_PCT="$OPTARG" ;;
+    *)
+      echo "Usage: $0 -k <kval> -i <ival> -t <threads> -c <cluster_pct> -o <output.fa>"
+      exit 1
+      ;;
+  esac
+done
+
+# Validate args
+
+: "${KVAL:?Missing -k (k-value)}"
+: "${IVAL:?Missing -i (i-value)}"
+: "${CLUSTER_PCT:?Missing -c (cluster match percentage)}"
+: "${OUTFA:?Missing -o (output fasta)}"
+
+# Create temporary sequence set file
+
+TMP_SEQS="k${KVAL}.i${IVAL}.c${CLUSTER_PCT}.seqs"
+
+# Select contigs
+
+echo "[INFO] Selecting contigs (k=$KVAL i=$IVAL threads=$THREADS)"
+
+parallel --no-notice -j "$THREADS" \
+	  mawk -v x="$KVAL" \''$1 >= x'\' ::: *.uniq.seqs \
+	| cut -f2 \
+	| perl -e '
+		while (<>) {chomp; $z{$_}++;}
+		while(($k,$v) = each(%z)) {print "$v\t$k\n";}' \
+	| mawk -v x="$IVAL" '$1 >= x' \
+	| cut -f2 \
+	| mawk '{c= c + 1; print ">Contig_" c "\n" $1}' \
+	| sed -e 's/NNNNNNNNNN/\t/g' \
+	| cut -f1 \
+	> "$TMP_SEQS"
+
+# Cluster with cd-hit
+
+echo "[INFO] Running cd-hit-est (c=$CLUSTER_PCT threads=$THREADS)"
+
+cd-hit-est \
+  -i "$TMP_SEQS" \
+  -o "$OUTFA" \
+  -M 0 \
+  -T "$THREADS" \
+  -c "$CLUSTER_PCT"
+
+echo "[INFO] Done"
+
+rm -f "$TMP_SEQS"
+```
+
+To run:
 
 ```sh
 module load cd-hit/4.6
@@ -213,7 +283,64 @@ bwa index -p PHHA_ref PHHA_ref.fa
 
 ## 2. Mapping
 
-Straightforward. Automating via the script `mapAndIndex.sh`. Look in there for details.
+Straightforward. Automating via the script `mapAndIndex.sh`. Contents of that script:
+
+```sh
+#!/bin/bash
+
+while getopts ":t:r:f:" opt; do
+    case ${opt} in
+        t )
+            THREADS="$OPTARG"
+            ;;
+        r )
+            REFERENCE="$OPTARG"
+            ;;
+        f )
+            FASTQS="$OPTARG"
+            ;;
+        \? )
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+        : )
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+    esac
+done
+
+# check that all required options were provided
+if [ -z "$THREADS" ] || [ -z "$REFERENCE" ] || [ -z "$FASTQS" ]; then
+    echo "Usage: $0 -t <threads> -r <reference> -f <fastq_glob>"
+    exit 1
+fi
+
+ctr=1
+fTotal=$(ls $FASTQS -1 | wc -l)
+
+for file in $FASTQS
+	do
+	if test -f "$file"
+	then
+		fPrefix=$(echo "$file" | sed 's|.*/||' | cut -f1 -d ".")
+		echo mapping and sorting individual "$ctr" of "$fTotal"
+		bwa mem -t "$THREADS" "$REFERENCE" "$file" | \
+		samtools view -u -b - | \
+		samtools sort -l0 -@"$THREADS" -o "$fPrefix.sorted.bam"
+		((ctr++))
+	fi
+done
+for sBam in *.sorted.bam
+	do
+	if test -f "$sBam"
+	then
+		samtools index -@"$THREADS" "$sBam"
+	fi
+done
+```
+
+To run:
 
 ```sh
 module load bwa/0.7.17-r1188
