@@ -57,5 +57,42 @@ Ellen:
 Tom:
 - un-PC (https://onlinelibrary.wiley.com/doi/full/10.1111/1755-0998.12747)
 
+## Week 5; 2/18/26
+Waiting on entropy
+
+Cameron:
+- think about organizing directory where everyone can access genotype matrix, lat/long, climate data
+- get citations into botany background/restoration emphasis - be sure to find any/all papers that deal with phylogenetic analyses of Phacelia (for both Introduction and Discussion)
+
+Seth:
+- pull PRISM data, plot variables by latitude
+
+Ellen:
+- observed & expected heterozygosity
+
+Tom:
+- un-PC/eems (https://onlinelibrary.wiley.com/doi/full/10.1111/1755-0998.12747)
+
+**Journals to peruse for basic basic plant landscape genetics**
+
+Seth:
+AoB plants
+Scientific reports
+
+Ellen:
+American Journal of Botany
+Applications in plant science
+
+Cameron:
+restoration ecology
+ecology and evolution
+
+Tom:
+Journal of heredity
+Native plants journal
 
 
+
+Basement open access:
+BMC plant biology
+BMC ecology and evolution
