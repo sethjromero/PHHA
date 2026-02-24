@@ -361,7 +361,7 @@ bbox = c(
   right = lon_range[2] + lon_buffer,
   top = lat_range[2] + lat_buffer
 )
-# ggmap::register_stadiamaps(key = '4c46444b-f955-42c9-a5b0-c50907ee4402')
+# ggmap::register_stadiamaps(key = '')
 base_map = get_stadiamap(
   bbox = bbox,
   maptype = "stamen_terrain",   # natural terrain background
