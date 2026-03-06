@@ -215,5 +215,24 @@ for min_depth in [1, 2, 4, 6, 8, 10]:
   g.fig.suptitle(f"Allele fraction distribution by population (min depth {min_depth})")
   plt.savefig(f'allele_fraction_by_population_panels_{vers}_min_dp_{min_depth}.png')
   plt.show()
+  
+for min_depth in [1, 2, 4, 6, 8, 10]:
+  d = df['depth']>= min_depth
+  df2 = df.loc[d, :]
+  g = sns.displot(
+      data=df2,
+      x="allele_fraction",
+      col="population",
+      col_wrap=4,
+      kind="hist",
+      fill=True,
+      height=3,
+      aspect=1.2,
+      bins=30
+  )
+  g.fig.subplots_adjust(top=0.9)
+  g.fig.suptitle(f"Allele fraction distribution by population (min depth {min_depth})")
+  plt.savefig(f'hist_allele_fraction_by_population_panels_{vers}_min_dp_{min_depth}.png')
+  plt.show()
 
 
