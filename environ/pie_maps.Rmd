@@ -175,7 +175,7 @@ baseMap <- ggplot(countries) +
         # plot.margin = margin(t = 10, r = 30, b = 10, l = 10, unit = 'pt'),
         plot.margin = margin(t = 2, r = 4, b = 15, l = 4, unit = 'pt'))
 
-baseMap
+# baseMap
 ```
 
 
@@ -185,9 +185,9 @@ phha_locs <- read.csv('PHHA_latlong.csv') %>%
   prjPoints()
 ```
 
-```{r, include=FALSE, fig.width=26, fig.height=20}
-col_pie <- c('#ba039b', '#ead624', '#154975', '#fe8f06', '#4ed31b', 
-             '#ffa5ca', '#78F5C1')
+```{r, include=FALSE, fig.width=26, fig.height=10}
+col_pie <- c('#ba039b', '#ead624', '#154975', '#39F7A0', '#4ed31b', 
+             '#ffa5ca', '#fe8f06')
 
 makePopId <- function(fileIndv){
   PopIDdf = read.table(fileIndv, sep="\t") %>%
@@ -197,7 +197,7 @@ makePopId <- function(fileIndv){
   return(PopIDdf)
 }
 
-PHHApop <- makePopId('../filtering/PHHA.bithin.q30.i88.maxdp12.a70.maf03.012.indv')
+PHHApop <- makePopId('../filtering/PHHA.bithin.q30.i85.maxdp12.a70.maf03.012.indv')
 
 anck2_pie <- read.csv('../entropy/estpost_files/q2.txt') %>%
   cbind(PHHApop) %>%
@@ -206,16 +206,17 @@ anck2_pie <- read.csv('../entropy/estpost_files/q2.txt') %>%
 anck3_pie <- read.csv('../entropy/estpost_files/q3.txt') %>%
   cbind(PHHApop) %>%
   mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
+anck3_pie$ancGroup <- factor(recode(anck3_pie$ancGroup, '1' = '2', '2' = '1'))
 
 anck4_pie <- read.csv('../entropy/estpost_files/q4.txt') %>%
   cbind(PHHApop) %>%
   mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
-anck4_pie$ancGroup <- factor(recode(anck4_pie$ancGroup, '0' = '1', '1' = '0'))
+anck4_pie$ancGroup <- factor(recode(anck4_pie$ancGroup, '2' = '1', '3' = '2', '1' = '3'))
 
 anck5_pie <- read.csv('../entropy/estpost_files/q5.txt') %>%
   cbind(PHHApop) %>%
   mutate(ancGroup = str_split_i(param, pattern = '_', i = -1))
-anck5_pie$ancGroup <- factor(recode(anck5_pie$ancGroup, '1' = '4', '2' = '3', '3' = '1', '4' = '2'))
+# anck5_pie$ancGroup <- factor(recode(anck5_pie$ancGroup, '1' = '4', '2' = '3', '3' = '1', '4' = '2'))
 
 anck6_pie <- read.csv('../entropy/estpost_files/q6.txt') %>%
   cbind(PHHApop) %>%
@@ -232,7 +233,7 @@ makePieMap <- function(anc_df, k, colors){
   pie_df = anc_df %>%
     group_by(Pop, ancGroup) %>%
     summarise(popMean = mean(mean)) %>%
-    full_join(phha_locs, by = 'Pop') %>%
+    left_join(phha_locs, by = 'Pop') %>%
     mutate(ancGroup = paste0('q', ancGroup)) %>%
     pivot_wider(values_from = popMean, names_from = ancGroup)
   k_cols = colnames(pie_df)[(ncol(pie_df) - k + 1):ncol(pie_df)]
@@ -253,24 +254,15 @@ makePieMap <- function(anc_df, k, colors){
   return(pie_map)
 }
 
-pie2map <- makePieMap(anck2_pie, 2, col_pie) +
-  theme(axis.title.x.bottom = element_blank(),
-        axis.text.x.bottom = element_blank(),
-        axis.ticks.x = element_blank())
+pie2map <- makePieMap(anck2_pie, 2, col_pie)
 pie3map <- makePieMap(anck3_pie, 3, col_pie) +
   theme(axis.title.y.left = element_blank(),
         axis.text.y.left = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.title.x.bottom = element_blank(),
-        axis.text.x.bottom = element_blank(),
-        axis.ticks.x = element_blank())
+        axis.ticks.y = element_blank())
 pie4map <- makePieMap(anck4_pie, 4, col_pie)  +
   theme(axis.title.y.left = element_blank(),
         axis.text.y.left = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.title.x.bottom = element_blank(),
-        axis.text.x.bottom = element_blank(),
-        axis.ticks.x = element_blank())
+        axis.ticks.y = element_blank())
 pie5map <- makePieMap(anck5_pie, 5, col_pie)
 pie6map <- makePieMap(anck6_pie, 6, col_pie) +
   theme(axis.title.y.left = element_blank(),
@@ -281,8 +273,206 @@ pie7map <- makePieMap(anck7_pie, 7, col_pie) +
         axis.text.y.left = element_blank(),
         axis.ticks.y = element_blank())
 
-pies_2to7 <- pie2map + pie3map + pie4map + pie5map + pie6map + pie7map + plot_layout(ncol = 3)
+pies_2to4 <- pie2map + pie3map + pie4map + plot_layout(ncol = 3)
 
-# ggsave('../images/pieMaps_2to7.png', pies_2to7, width = 26, height = 20, dpi = 400)
+pies_2to4
+
+ggsave('../images/pieMaps_2to4.png', pies_2to4, width = 26, height = 10, dpi = 400)
 ```
 
+```{r, warning = F, fig.width=16, fig.height=7, echo=TRUE}
+col24 <- c("#6c2733", "#905f33", "#7b39d5", "#bce333", "#cd4cc3",
+           "#49571A", "#74398b", "#D49202", "#0051FF", "#1cf1a3",
+           "#7ccfd2", "#d04675", "#154975", "#6690bd", "#4ed31b",
+           "#d1b3d8", "#77d898", "#fa756b", "#cccc9c", "#FCB61E",
+           "#cb8985", "#FFE508", "#e72525", "#0A7D22")
+
+pcaDF <- function(file012, popID){
+  df012 = fread(file012, sep = ',', data.table = F)[,-1] %>%
+    as.matrix()
+  colmean = apply(df012, 2, mean, na.rm=TRUE)
+  normalize = matrix(nrow = nrow(df012), ncol = ncol(df012))
+  af = colmean/2
+  for (m in 1:length(af)){
+    nr = df012[ ,m]-colmean[m]
+    dn = sqrt(af[m]*(1-af[m]))
+    normalize[ ,m] = nr/dn
+  }
+  pca012 = prcomp(normalize, scale. = FALSE, center = FALSE)
+  pca012_loading = pca012$x
+  pca_df = pca012_loading[,1:6]
+  pca_df = cbind(popID, pca_df)
+  return(pca_df)
+}
+
+df012 <- fread('../entropy/estpost_files/gprob_k3.txt', 
+               sep = ',', data.table = F)[,-1] %>%
+  as.matrix()
+colmean <- apply(df012, 2, mean, na.rm=TRUE)
+normalize <- matrix(nrow = nrow(df012), ncol = ncol(df012))
+af <- colmean/2
+for (m in 1:length(af)){
+  nr = df012[ ,m]-colmean[m]
+  dn = sqrt(af[m]*(1-af[m]))
+  normalize[ ,m] = nr/dn
+}
+pca012 <- prcomp(normalize, scale. = FALSE, center = FALSE)
+pc1var <- formatC(((summary(pca012)$importance[2,1])*100), digits = 2, format = 'f')
+pc2var <- formatC(((summary(pca012)$importance[2,2])*100), digits = 2, format = 'f')
+pc3var <- formatC(((summary(pca012)$importance[2,3])*100), digits = 2, format = 'f')
+pc4var <- formatC(((summary(pca012)$importance[2,4])*100), digits = 2, format = 'f')
+pca012_loading <- pca012$x
+pca_df <- pca012_loading[,1:6]
+pca_df <- cbind(PHHApop, pca_df)
+
+
+# ## ALTERNATIVE TO PATTERSON STANDARDIZATION
+# # CAN TAKE RAW GENOTYPE MATRIX AND DO NORMAL PCA WITH
+# df012 = fread('../../POMA/entropy/gprob2.txt', sep = ',', data.table = F)[,-1] %>%
+#   as.matrix()
+# pca012 = prcomp(df012, scale. = F, center = T)
+# # PULL OUT VAR EXPLAINED BY AXIS LIKE SO
+# pc1var = formatC(((summary(pca012)$importance[2,1])*100), digits = 1, format = 'f')
+# pc2var = formatC(((summary(pca012)$importance[2,2])*100), digits = 1, format = 'f')
+# pc3var = formatC(((summary(pca012)$importance[2,3])*100), digits = 1, format = 'f')
+# pc4var = formatC(((summary(pca012)$importance[2,4])*100), digits = 1, format = 'f')
+# pc5var = formatC(((summary(pca012)$importance[2,5])*100), digits = 1, format = 'f')
+# pc6var = formatC(((summary(pca012)$importance[2,6])*100), digits = 1, format = 'f')
+# pca012_loading = pca012$x
+# pca_df = pca012_loading[,1:6]
+# pca_df = cbind(POMApopID, pca_df)
+# 
+# pca12 <- ggplot(data = pca_df, 
+#                 aes(x = PC1, y = PC2, fill = Pop, color = Pop)) +
+#   geom_point(size = 6, stroke = 1, pch = 21) + 
+# # BETTER WAY THAN HARD-CODING VAR EXPLAINED
+#   xlab(paste("PC",1," (",pc1var,"%)",sep="")) +
+#   ylab(paste("PC",2," (",pc2var,"%)",sep="")) +
+#   scale_fill_manual(values = col7) +
+#   scale_color_manual(values = col7_d3) +
+#   # scale_x_continuous(limits = c(-65, 85), breaks = seq(-50, 75, 25)) +
+#   # scale_y_continuous(limits = c(-70, 30), breaks = seq(-50, 25, 25)) +
+#   theme_bw() + 
+#   theme(legend.position = 'bottom',
+#         axis.text = element_text(size = 14),
+#         axis.title.y.left = element_text(size = 24,
+#                                          face = 'bold',
+#                                          vjust = 1),
+#         axis.title.x.bottom = element_text(size = 24,
+#                                          face = 'bold',
+#                                          vjust = -1),
+#         panel.border = element_rect(linewidth = 1.5, color = "black"),
+#         legend.text = element_text(size = 13),
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         plot.margin = margin(t = 25, r = 5, b = 25, l = 10, unit = 'pt'))
+# 
+# # pca12
+# ## END OF ALTERNATIVE
+
+# pcaKrla <- pcaDF('../entropy/estpost_files/gprob_k3.txt', PHHApop)
+
+  geom_label_repel(data = phha, 
+                   aes(x = prjx, y = prjy, label = Pop, fill = Pop, color = Pop),
+                   fontface = "bold", size = 6.5, box.padding = 0.75,
+                   label.padding = 0.3,
+                   label.r = unit(5, "pt"),
+                   label.size = 2,
+                   seed = 1234) +
+  geom_label_repel(data = phha, 
+                   aes(x = prjx, y = prjy, label = Pop, fill = Pop),
+                   fontface = "bold", size = 6.5, box.padding = 0.75,
+                   label.padding = 0.3,
+                   label.r = unit(5, "pt"),
+                   label.size = NA,
+                   color = 'black',
+                   seed = 1234) +
+
+pca_mean <- pca_df %>% 
+  group_by(Pop) %>% 
+  summarize(PC1_mean=mean(PC1),PC2_mean=mean(PC2),PC3_mean=mean(PC3),
+            PC4_mean=mean(PC4),PC5_mean=mean(PC5),PC6_mean=mean(PC6))
+pca_df <- left_join(pca_df,pca_mean)
+pca_fw <- ggplot(data = pca_mean, 
+                 aes(x = PC1_mean,
+                     y = PC2_mean,
+                     fill = Pop,
+                     color = Pop, 
+                     label = Pop)) +
+  geom_segment(data=pca_df,
+               aes(x = PC1,y = PC2,
+                   xend = PC1_mean,
+                   yend = PC2_mean),
+               linewidth = 0.3) +
+  geom_point(size = 3, 
+             stroke = 0.5, pch = 21) + 
+  geom_label_repel(max.overlaps = 40, label.padding = 0.2, box.padding = 0.65,
+                   label.r = unit(3, "pt"),
+                   label.size = 0.5,
+                   alpha = 0.6,
+                   size = 3,
+                   segment.size = 0.1,
+                   fontface = 'bold',
+                   seed = 1234) +
+  geom_label_repel(color = 'black',
+                   max.overlaps = 40, label.padding = 0.2, box.padding = 0.65,
+                   label.r = unit(3, "pt"),
+                   label.size = NA,
+                   alpha = 0.4,
+                   size = 3,
+                   segment.size = 0.1,
+                   fontface = 'bold',
+                   seed = 1234) +
+  xlab(paste0('PC1 (', pc1var, '%)')) +
+  ylab(paste0('PC2 (', pc2var, '%)')) +
+  scale_fill_manual(values = col24) +
+  scale_color_manual(values = darken(col24, amount = 0.3)) +
+  theme_bw() +
+  theme(legend.position = 'none',
+        axis.text = element_text(size = 14),
+        axis.title.y.left = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = 1),
+        axis.title.x.bottom = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = -1),
+        panel.border = element_rect(linewidth = 1.5, color = "black"),
+        legend.text = element_text(size = 13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin = margin(t = 25, r = 5, b = 25, l = 10, unit = 'pt'))
+
+pca_fw
+
+pca12 <- ggplot(data = pcaKrla, 
+                aes(x = PC1, y = PC2, fill = Pop, color = Pop)) +
+  geom_point(size = 4.5, stroke = 1, pch = 21) + 
+  xlab(paste0('PC1 (', pc1var, '%)')) +
+  ylab(paste0('PC2 (', pc2var, '%)')) +
+  scale_fill_manual(values = col24) +
+  scale_color_manual(values = darken(col24, amount = 0.3)) +
+  # scale_x_continuous(limits = c(-65, 85), breaks = seq(-50, 75, 25)) +
+  # scale_y_continuous(limits = c(-70, 30), breaks = seq(-50, 25, 25)) +
+  theme_bw() + 
+  theme(legend.position = 'none',
+        axis.text = element_text(size = 14),
+        axis.title.y.left = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = 1),
+        axis.title.x.bottom = element_text(size = 24,
+                                         face = 'bold',
+                                         vjust = -1),
+        panel.border = element_rect(linewidth = 1.5, color = "black"),
+        legend.text = element_text(size = 13),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.margin = margin(t = 25, r = 5, b = 25, l = 10, unit = 'pt'))
+
+pca12
+
+two_panel <- pca12 + pca_fw
+
+two_panel
+
+ggsave('../images/pca_fw_2panel.png', two_panel, width = 16, height = 7, dpi = 400)
+```
